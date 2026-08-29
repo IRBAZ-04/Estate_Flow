@@ -11,6 +11,8 @@ import {
   LogOut,
   LayoutDashboard,
   ChevronDown,
+  PlusCircle,
+  Building,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BackendStatusBadge from './BackendStatusBadge';
@@ -99,6 +101,21 @@ const Navbar = () => {
                 Dashboard
               </NavLink>
             )}
+
+            {user?.role === 'owner' && (
+              <NavLink
+                to="/owner/properties"
+                className={({ isActive }) =>
+                  `px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'text-teal-600 bg-teal-50/80 font-semibold'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                  }`
+                }
+              >
+                My Properties
+              </NavLink>
+            )}
           </nav>
 
           {/* Right Action Area */}
@@ -111,7 +128,7 @@ const Navbar = () => {
               <div className="relative">
                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition shadow-2xs"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition shadow-2xs cursor-pointer"
                 >
                   <div className="w-7 h-7 rounded-lg bg-teal-600 text-white font-bold text-xs flex items-center justify-center">
                     {user?.name?.charAt(0)?.toUpperCase() || 'U'}
@@ -133,7 +150,7 @@ const Navbar = () => {
 
                 {/* Dropdown Menu */}
                 {userDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 text-xs">
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 text-xs">
                     <div className="px-3 py-2 border-b border-slate-100">
                       <p className="font-semibold text-slate-900 truncate">{user?.name}</p>
                       <p className="text-[11px] text-slate-400 font-mono truncate">{user?.email}</p>
@@ -147,6 +164,27 @@ const Navbar = () => {
                       <LayoutDashboard className="w-3.5 h-3.5 text-teal-600" />
                       <span>{user?.role?.toUpperCase()} Dashboard</span>
                     </Link>
+
+                    {user?.role === 'owner' && (
+                      <>
+                        <Link
+                          to="/owner/properties"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-teal-600 transition"
+                        >
+                          <Building className="w-3.5 h-3.5 text-cyan-600" />
+                          <span>My Properties</span>
+                        </Link>
+                        <Link
+                          to="/owner/properties/add"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-teal-600 transition"
+                        >
+                          <PlusCircle className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Add Property</span>
+                        </Link>
+                      </>
+                    )}
 
                     <Link
                       to="/profile"
@@ -242,6 +280,28 @@ const Navbar = () => {
                 <LayoutDashboard className="w-4 h-4 text-teal-600" />
                 <span>My Dashboard</span>
               </Link>
+
+              {user?.role === 'owner' && (
+                <>
+                  <Link
+                    to="/owner/properties"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
+                  >
+                    <Building className="w-4 h-4 text-cyan-600" />
+                    <span>My Properties</span>
+                  </Link>
+
+                  <Link
+                    to="/owner/properties/add"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
+                  >
+                    <PlusCircle className="w-4 h-4 text-emerald-600" />
+                    <span>Add New Property</span>
+                  </Link>
+                </>
+              )}
 
               <Link
                 to="/profile"

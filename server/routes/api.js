@@ -3,10 +3,12 @@ const router = express.Router();
 
 const healthRoutes = require('./healthRoutes');
 const authRoutes = require('./authRoutes');
+const propertyRoutes = require('./propertyRoutes');
 
 // Mount routes
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
+router.use('/properties', propertyRoutes);
 
 // Master API index
 router.get('/', (req, res) => {
@@ -21,8 +23,15 @@ router.get('/', (req, res) => {
         me: 'GET /api/auth/me (Protected)',
         profile: 'PUT /api/auth/profile (Protected)',
       },
-      properties: '/api/properties (Available in Phase 3)',
-      search: '/api/properties/search (Available in Phase 4)',
+      properties: {
+        list: 'GET /api/properties (Public)',
+        my: 'GET /api/properties/my (Protected: Owner/Admin)',
+        details: 'GET /api/properties/:id (Public)',
+        create: 'POST /api/properties (Protected: Owner/Admin)',
+        update: 'PUT /api/properties/:id (Protected: Owner/Admin)',
+        delete: 'DELETE /api/properties/:id (Protected: Owner/Admin)',
+        status: 'PATCH /api/properties/:id/status (Protected: Owner/Admin)',
+      },
       inquiries: '/api/inquiries (Available in Phase 5)',
       visits: '/api/visits (Available in Phase 5)',
       agreements: '/api/agreements (Available in Phase 6)',

@@ -1,27 +1,80 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   Building2,
   PlusCircle,
-  Users,
-  Calendar,
-  MessageSquare,
-  FileCheck,
+  Clock,
+  CheckCircle2,
+  Tag,
+  ArrowRight,
   TrendingUp,
+  MapPin,
+  Calendar,
   Sparkles,
 } from 'lucide-react';
+import propertyService from '../../services/propertyService';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
+import Loader from '../../components/common/Loader';
 
 const OwnerDashboard = () => {
   const { user } = useAuth();
+  const [properties, setProperties] = useState([]);
+  const [metrics, setMetrics] = useState({
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rentedOrSold: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
-  const metrics = [
-    { label: 'My Properties', val: '4', icon: <Building2 className="w-5 h-5 text-teal-600" />, sub: '3 Approved, 1 Pending' },
-    { label: 'Active Inquiries', val: '8', icon: <MessageSquare className="w-5 h-5 text-cyan-600" />, sub: '2 New today' },
-    { label: 'Scheduled Visits', val: '3', icon: <Calendar className="w-5 h-5 text-amber-600" />, sub: 'This weekend' },
-    { label: 'Rental Income', val: '₹ 85,000', icon: <TrendingUp className="w-5 h-5 text-emerald-600" />, sub: 'Monthly projected' },
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      try {
+        const res = await propertyService.getMyProperties();
+        setProperties(res.data || []);
+        if (res.metrics) setMetrics(res.metrics);
+      } catch (err) {
+        console.error('[OwnerDashboard Error]:', err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  const metricCards = [
+    {
+      label: 'Total Listed',
+      val: metrics.total,
+      icon: <Building2 className="w-5 h-5 text-teal-600" />,
+      sub: 'All properties',
+      color: 'text-teal-600',
+    },
+    {
+      label: 'Pending Approval',
+      val: metrics.pending,
+      icon: <Clock className="w-5 h-5 text-amber-600" />,
+      sub: 'Requires Admin Review',
+      color: 'text-amber-600',
+    },
+    {
+      label: 'Approved / Active',
+      val: metrics.approved,
+      icon: <CheckCircle2 className="w-5 h-5 text-emerald-600" />,
+      sub: 'Live on Public Catalog',
+      color: 'text-emerald-600',
+    },
+    {
+      label: 'Rented / Sold',
+      val: metrics.rentedOrSold,
+      icon: <Tag className="w-5 h-5 text-blue-600" />,
+      sub: 'Occupied Units',
+      color: 'text-blue-600',
+    },
   ];
 
   return (
@@ -37,83 +90,160 @@ const OwnerDashboard = () => {
             Welcome, {user?.name || 'Property Owner'}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Manage your property listings, review tenant inquiries, and track rental agreements.
+            Manage your real estate portfolio, check approval statuses, and add new properties.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <Link to="/properties">
-            <Button variant="primary" size="sm" icon={<PlusCircle className="w-4 h-4" />}>
-              Add Property (Phase 3)
+          <Link to="/owner/properties/add">
+            <Button variant="primary" size="md" icon={<PlusCircle className="w-4 h-4" />}>
+              Add Property
             </Button>
           </Link>
-          <Link to="/profile">
-            <Button variant="outline" size="sm">
-              Profile
+          <Link to="/owner/properties">
+            <Button variant="outline" size="md">
+              Manage Listings
             </Button>
           </Link>
         </div>
       </div>
 
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {metrics.map((m, idx) => (
+      {/* Dynamic Metrics Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {metricCards.map((m, idx) => (
           <Card key={idx} padding="p-5" className="border-slate-200">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500">{m.label}</span>
               <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">{m.icon}</div>
             </div>
             <div className="mt-3">
-              <span className="text-2xl font-black text-slate-900">{m.val}</span>
-              <span className="block text-[11px] text-teal-600 font-medium mt-1">{m.sub}</span>
+              <span className={`text-2xl font-black ${m.color}`}>
+                {loading ? '-' : m.val}
+              </span>
+              <span className="block text-[11px] text-slate-400 font-medium mt-1">{m.sub}</span>
             </div>
           </Card>
         ))}
       </div>
 
-      {/* Info Card */}
+      {/* Recent Properties & Quick Links */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h3 className="font-bold text-sm text-slate-900">Owner Account Status (Phase 2 Verified)</h3>
-            <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              Active
-            </span>
+        {/* Recent Listings (2 Cols) */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm text-slate-900">Your Recent Property Listings</h3>
+            <Link
+              to="/owner/properties"
+              className="text-xs font-semibold text-teal-600 hover:text-teal-700 flex items-center gap-1"
+            >
+              <span>View All</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
 
-          <div className="space-y-2 text-xs text-slate-600">
-            <p>
-              <strong className="text-slate-800">Owner Name:</strong> {user?.name}
-            </p>
-            <p>
-              <strong className="text-slate-800">Email:</strong> {user?.email}
-            </p>
-            <p>
-              <strong className="text-slate-800">Phone:</strong> {user?.phone || 'Not provided'}
-            </p>
-            <p>
-              <strong className="text-slate-800">Role:</strong>{' '}
-              <span className="px-2 py-0.5 rounded bg-cyan-100 text-cyan-800 font-bold uppercase text-[10px]">
-                {user?.role}
-              </span>
-            </p>
-          </div>
+          {loading ? (
+            <div className="py-12 flex justify-center bg-white rounded-2xl border border-slate-200">
+              <Loader size="md" message="Loading listings..." />
+            </div>
+          ) : properties.length === 0 ? (
+            <Card className="text-center py-10 space-y-3">
+              <Building2 className="w-8 h-8 text-slate-400 mx-auto" />
+              <p className="text-xs font-medium text-slate-600">No properties in your portfolio yet.</p>
+              <Link to="/owner/properties/add">
+                <Button variant="primary" size="sm" icon={<PlusCircle className="w-3.5 h-3.5" />}>
+                  Create Your First Property
+                </Button>
+              </Link>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {properties.slice(0, 3).map((prop) => (
+                <div
+                  key={prop._id}
+                  className="p-4 bg-white rounded-2xl border border-slate-200 flex items-center justify-between gap-4 hover:border-teal-300 transition shadow-2xs"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img
+                      src={
+                        prop.images && prop.images.length > 0
+                          ? prop.images[0]
+                          : 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=200&q=80'
+                      }
+                      alt={prop.title}
+                      className="w-14 h-12 rounded-xl object-cover bg-slate-100 shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <Link
+                        to={`/properties/${prop._id}`}
+                        className="font-bold text-xs text-slate-900 hover:text-teal-600 truncate block"
+                      >
+                        {prop.title}
+                      </Link>
+                      <span className="text-[11px] text-slate-400 flex items-center gap-1 truncate">
+                        <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                        {prop.location} • ₹ {new Intl.NumberFormat('en-IN').format(prop.price)}
+                      </span>
+                    </div>
+                  </div>
 
-          <p className="text-xs text-slate-500 pt-2 border-t border-slate-100">
-            In Phase 3, you will be able to create new properties, upload images via Multer, and edit your listings.
-          </p>
-        </Card>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                        prop.status === 'Approved' || prop.status === 'Available'
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                          : prop.status === 'Pending'
+                          ? 'bg-amber-100 text-amber-800 border-amber-200'
+                          : 'bg-slate-100 text-slate-700 border-slate-200'
+                      }`}
+                    >
+                      {prop.status}
+                    </span>
 
-        <Card className="space-y-3 bg-slate-900 text-white border-none">
-          <div className="flex items-center gap-2 text-cyan-400">
-            <Sparkles className="w-5 h-5" />
-            <h3 className="font-bold text-sm">Next Phase: Phase 3</h3>
-          </div>
-          <p className="text-xs text-slate-300 leading-relaxed">
-            Property creation, Multer multi-image uploads, and Owner-specific listings CRUD are up next in Phase 3.
-          </p>
-        </Card>
+                    <Link to={`/owner/properties/edit/${prop._id}`}>
+                      <Button variant="outline" size="sm">
+                        Edit
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Phase Roadmap & Tips Sidebar */}
+        <div className="space-y-4">
+          <Card className="space-y-3 bg-gradient-to-br from-slate-900 to-slate-800 text-white border-none shadow-md">
+            <div className="flex items-center gap-2 text-cyan-400">
+              <Sparkles className="w-4 h-4" />
+              <h4 className="font-bold text-xs uppercase tracking-wider">Owner Actions</h4>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              You can post listings with multi-image uploads, manage details, and toggle unit availability when tenants move in.
+            </p>
+            <div className="pt-2 border-t border-slate-700 flex justify-between items-center text-[11px] text-teal-300 font-mono">
+              <span>Phase 3: Property CRUD Live</span>
+            </div>
+          </Card>
+
+          <Card className="space-y-2.5">
+            <h4 className="font-bold text-xs text-slate-900">Upcoming Workflow</h4>
+            <div className="space-y-1.5 text-xs text-slate-600">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
+                <span>Phase 4: Advanced Search & Filter</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
+                <span>Phase 5: Inquiries & Visit Requests</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span>Phase 6: Rental Agreements & Rent Tracking</span>
+              </div>
+            </div>
+          </Card>
+        </div>
       </div>
     </div>
   );
