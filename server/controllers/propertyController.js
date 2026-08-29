@@ -1,7 +1,7 @@
 const Property = require('../models/Property');
 
 /**
- * @desc    Get all public approved/available properties
+ * @desc    Get all public approved/available properties with multi-parameter search, filtering, sorting, and pagination
  * @route   GET /api/properties
  * @access  Public
  */
@@ -15,45 +15,80 @@ const getPublicProperties = async (req, res, next) => {
       minPrice,
       maxPrice,
       bedrooms,
+      bathrooms,
       furnishingStatus,
-      sortBy,
+      parking,
+      availability,
+      sortBy = 'newest',
       page = 1,
-      limit = 12,
+      limit = 9,
     } = req.query;
 
-    // Filter only approved / available properties for public consumption
+    // Filter only approved/available properties by default for public consumption
     const query = {
       status: { $in: ['Approved', 'Available'] },
     };
 
+    // If specific availability is requested (e.g. 'Available', 'Rented', 'Sold')
+    if (availability && availability !== 'All') {
+      query.status = availability;
+    }
+
     // Keyword search over title, description, location, or address
-    if (keyword) {
+    if (keyword && keyword.trim() !== '') {
+      const cleanKeyword = keyword.trim();
       query.$or = [
-        { title: { $regex: keyword, $options: 'i' } },
-        { description: { $regex: keyword, $options: 'i' } },
-        { location: { $regex: keyword, $options: 'i' } },
-        { address: { $regex: keyword, $options: 'i' } },
+        { title: { $regex: cleanKeyword, $options: 'i' } },
+        { description: { $regex: cleanKeyword, $options: 'i' } },
+        { location: { $regex: cleanKeyword, $options: 'i' } },
+        { address: { $regex: cleanKeyword, $options: 'i' } },
       ];
     }
 
-    if (location) {
-      query.location = { $regex: location, $options: 'i' };
+    // Specific location filter
+    if (location && location.trim() !== '' && location !== 'All') {
+      query.location = { $regex: location.trim(), $options: 'i' };
     }
 
+    // Property Type filter
     if (propertyType && propertyType !== 'All') {
       query.propertyType = propertyType;
     }
 
+    // Purpose filter (Rent / Sale)
     if (purpose && purpose !== 'All') {
       query.purpose = purpose;
     }
 
+    // Furnishing Status filter
     if (furnishingStatus && furnishingStatus !== 'All') {
       query.furnishingStatus = furnishingStatus;
     }
 
-    if (bedrooms && !isNaN(bedrooms)) {
-      query.bedrooms = { $gte: Number(bedrooms) };
+    // Parking filter
+    if (parking && parking !== 'All') {
+      query.parking = parking;
+    }
+
+    // Bedrooms filter
+    if (bedrooms && bedrooms !== 'All' && !isNaN(bedrooms)) {
+      const bedCount = Number(bedrooms);
+      // If 4+, match greater than or equal to 4
+      if (bedCount >= 4) {
+        query.bedrooms = { $gte: 4 };
+      } else {
+        query.bedrooms = bedCount;
+      }
+    }
+
+    // Bathrooms filter
+    if (bathrooms && bathrooms !== 'All' && !isNaN(bathrooms)) {
+      const bathCount = Number(bathrooms);
+      if (bathCount >= 3) {
+        query.bathrooms = { $gte: 3 };
+      } else {
+        query.bathrooms = bathCount;
+      }
     }
 
     // Price range filters
@@ -63,15 +98,16 @@ const getPublicProperties = async (req, res, next) => {
       if (maxPrice && !isNaN(maxPrice)) query.price.$lte = Number(maxPrice);
     }
 
-    // Sorting
-    let sortOptions = { createdAt: -1 }; // Default newest first
+    // Sorting presets
+    let sortOptions = { createdAt: -1 }; // Default: newest first
     if (sortBy === 'price_asc') sortOptions = { price: 1 };
     if (sortBy === 'price_desc') sortOptions = { price: -1 };
     if (sortBy === 'oldest') sortOptions = { createdAt: 1 };
+    if (sortBy === 'area_desc') sortOptions = { area: -1 };
 
-    // Pagination
-    const pageNumber = Math.max(1, parseInt(page, 10));
-    const pageSize = Math.max(1, Math.min(50, parseInt(limit, 10)));
+    // Pagination calculations
+    const pageNumber = Math.max(1, parseInt(page, 10) || 1);
+    const pageSize = Math.max(1, Math.min(50, parseInt(limit, 10) || 9));
     const skip = (pageNumber - 1) * pageSize;
 
     const total = await Property.countDocuments(query);
@@ -87,6 +123,7 @@ const getPublicProperties = async (req, res, next) => {
       total,
       totalPages: Math.ceil(total / pageSize) || 1,
       currentPage: pageNumber,
+      limit: pageSize,
       data: properties,
     });
   } catch (error) {
@@ -109,7 +146,6 @@ const getMyProperties = async (req, res, next) => {
       .populate('owner', 'name email phone')
       .sort({ createdAt: -1 });
 
-    // Calculate quick owner metrics
     const metrics = {
       total: properties.length,
       pending: properties.filter((p) => p.status === 'Pending').length,
@@ -181,7 +217,6 @@ const createProperty = async (req, res, next) => {
       images: bodyImages,
     } = req.body;
 
-    // Validate required fields
     if (!title || !description || !propertyType || !purpose || !price || !location || !address || !area) {
       return res.status(400).json({
         success: false,
@@ -189,13 +224,11 @@ const createProperty = async (req, res, next) => {
       });
     }
 
-    // Process uploaded image files if any
     let propertyImages = [];
     if (req.files && req.files.length > 0) {
       propertyImages = req.files.map((file) => `/uploads/properties/${file.filename}`);
     }
 
-    // Support JSON array or comma separated string of images from request body
     if (bodyImages) {
       const parsedImages = Array.isArray(bodyImages)
         ? bodyImages
@@ -205,14 +238,12 @@ const createProperty = async (req, res, next) => {
       propertyImages = [...propertyImages, ...parsedImages];
     }
 
-    // Fallback default image if none provided
     if (propertyImages.length === 0) {
       propertyImages = [
         'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1000&q=80',
       ];
     }
 
-    // Parse amenities
     let parsedAmenities = [];
     if (amenities) {
       parsedAmenities = Array.isArray(amenities)
@@ -222,7 +253,6 @@ const createProperty = async (req, res, next) => {
         : [];
     }
 
-    // Owner-created properties start as Pending; Admin-created can be Approved directly
     const initialStatus = req.user.role === 'admin' ? 'Approved' : 'Pending';
 
     const property = await Property.create({
@@ -273,7 +303,6 @@ const updateProperty = async (req, res, next) => {
       });
     }
 
-    // Ownership check: must be owner or admin
     if (
       property.owner.toString() !== req.user._id.toString() &&
       req.user.role !== 'admin'
@@ -324,7 +353,6 @@ const updateProperty = async (req, res, next) => {
         : [];
     }
 
-    // Handle images: retain existing specified images + append newly uploaded files
     let updatedImages = [];
     if (existingImages) {
       updatedImages = Array.isArray(existingImages)
@@ -342,7 +370,6 @@ const updateProperty = async (req, res, next) => {
     }
     updates.images = updatedImages;
 
-    // Status management
     if (status) {
       if (req.user.role === 'admin') {
         updates.status = status;
@@ -383,7 +410,6 @@ const deleteProperty = async (req, res, next) => {
       });
     }
 
-    // Ownership check: must be owner or admin
     if (
       property.owner.toString() !== req.user._id.toString() &&
       req.user.role !== 'admin'
@@ -423,7 +449,6 @@ const updatePropertyStatus = async (req, res, next) => {
       });
     }
 
-    // Admin can set any valid status
     if (req.user.role === 'admin') {
       property.status = status;
       await property.save();
@@ -434,7 +459,6 @@ const updatePropertyStatus = async (req, res, next) => {
       });
     }
 
-    // Owner can only toggle between Available, Rented, Sold
     if (property.owner.toString() === req.user._id.toString()) {
       if (!['Available', 'Rented', 'Sold'].includes(status)) {
         return res.status(400).json({

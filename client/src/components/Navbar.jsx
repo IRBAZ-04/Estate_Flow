@@ -13,6 +13,7 @@ import {
   ChevronDown,
   PlusCircle,
   Building,
+  Heart,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BackendStatusBadge from './BackendStatusBadge';
@@ -102,6 +103,22 @@ const Navbar = () => {
               </NavLink>
             )}
 
+            {isAuthenticated && (
+              <NavLink
+                to="/favorites"
+                className={({ isActive }) =>
+                  `px-3.5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                    isActive
+                      ? 'text-rose-600 bg-rose-50/80 font-semibold'
+                      : 'text-slate-600 hover:text-rose-600 hover:bg-slate-100/70'
+                  }`
+                }
+              >
+                <Heart className="w-3.5 h-3.5 text-rose-500" />
+                <span>Favorites</span>
+              </NavLink>
+            )}
+
             {user?.role === 'owner' && (
               <NavLink
                 to="/owner/properties"
@@ -163,6 +180,15 @@ const Navbar = () => {
                     >
                       <LayoutDashboard className="w-3.5 h-3.5 text-teal-600" />
                       <span>{user?.role?.toUpperCase()} Dashboard</span>
+                    </Link>
+
+                    <Link
+                      to="/favorites"
+                      onClick={() => setUserDropdownOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-rose-600 transition"
+                    >
+                      <Heart className="w-3.5 h-3.5 text-rose-500" />
+                      <span>Saved Favorites</span>
                     </Link>
 
                     {user?.role === 'owner' && (
@@ -279,6 +305,15 @@ const Navbar = () => {
               >
                 <LayoutDashboard className="w-4 h-4 text-teal-600" />
                 <span>My Dashboard</span>
+              </Link>
+
+              <Link
+                to="/favorites"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
+              >
+                <Heart className="w-4 h-4 text-rose-500" />
+                <span>Saved Favorites</span>
               </Link>
 
               {user?.role === 'owner' && (

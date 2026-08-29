@@ -15,8 +15,11 @@ import Register from './pages/Register';
 import Unauthorized from './pages/Unauthorized';
 import NotFound from './pages/NotFound';
 
-// Protected User Profile & Dashboards
+// Protected User Profile & Favorites
 import Profile from './pages/Profile';
+import Favorites from './pages/Favorites';
+
+// Dashboards
 import AdminDashboard from './pages/admin/AdminDashboard';
 import OwnerDashboard from './pages/owner/OwnerDashboard';
 import TenantDashboard from './pages/tenant/TenantDashboard';
@@ -42,12 +45,20 @@ function App() {
             <Route path="register" element={<Register />} />
             <Route path="unauthorized" element={<Unauthorized />} />
 
-            {/* Authenticated Profile */}
+            {/* Authenticated Profile & Favorites */}
             <Route
               path="profile"
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="favorites"
+              element={
+                <ProtectedRoute>
+                  <Favorites />
                 </ProtectedRoute>
               }
             />

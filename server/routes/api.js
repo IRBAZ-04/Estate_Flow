@@ -4,11 +4,13 @@ const router = express.Router();
 const healthRoutes = require('./healthRoutes');
 const authRoutes = require('./authRoutes');
 const propertyRoutes = require('./propertyRoutes');
+const favoriteRoutes = require('./favoriteRoutes');
 
 // Mount routes
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
 router.use('/properties', propertyRoutes);
+router.use('/favorites', favoriteRoutes);
 
 // Master API index
 router.get('/', (req, res) => {
@@ -24,13 +26,19 @@ router.get('/', (req, res) => {
         profile: 'PUT /api/auth/profile (Protected)',
       },
       properties: {
-        list: 'GET /api/properties (Public)',
+        list: 'GET /api/properties (Public Search & Filters)',
         my: 'GET /api/properties/my (Protected: Owner/Admin)',
         details: 'GET /api/properties/:id (Public)',
         create: 'POST /api/properties (Protected: Owner/Admin)',
         update: 'PUT /api/properties/:id (Protected: Owner/Admin)',
         delete: 'DELETE /api/properties/:id (Protected: Owner/Admin)',
         status: 'PATCH /api/properties/:id/status (Protected: Owner/Admin)',
+      },
+      favorites: {
+        list: 'GET /api/favorites (Protected)',
+        add: 'POST /api/favorites/:propertyId (Protected)',
+        remove: 'DELETE /api/favorites/:propertyId (Protected)',
+        check: 'GET /api/favorites/check/:propertyId (Protected)',
       },
       inquiries: '/api/inquiries (Available in Phase 5)',
       visits: '/api/visits (Available in Phase 5)',

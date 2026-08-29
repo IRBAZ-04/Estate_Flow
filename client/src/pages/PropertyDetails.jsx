@@ -18,8 +18,10 @@ import {
   Shield,
   Tag,
   Share2,
+  Heart,
 } from 'lucide-react';
 import propertyService from '../services/propertyService';
+import favoriteService from '../services/favoriteService';
 import { useAuth } from '../context/AuthContext';
 import Loader from '../components/common/Loader';
 import Button from '../components/common/Button';
@@ -28,9 +30,10 @@ import Card from '../components/common/Card';
 const PropertyDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const [property, setProperty] = useState(null);
+  const [isFavorited, setIsFavorited] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -51,6 +54,41 @@ const PropertyDetails = () => {
 
     fetchProperty();
   }, [id]);
+
+  useEffect(() => {
+    const checkFav = async () => {
+      if (!isAuthenticated || !id) return;
+      try {
+        const res = await favoriteService.checkFavorite(id);
+        setIsFavorited(res.isFavorite);
+      } catch (err) {
+        console.warn('[Favorite Check]:', err.message);
+      }
+    };
+
+    checkFav();
+  }, [id, isAuthenticated]);
+
+  const handleToggleFavorite = async () => {
+    if (!isAuthenticated) {
+      alert('Please sign in to save properties to your favorites.');
+      return;
+    }
+
+    const nextState = !isFavorited;
+    setIsFavorited(nextState);
+
+    try {
+      if (nextState) {
+        await favoriteService.addFavorite(id);
+      } else {
+        await favoriteService.removeFavorite(id);
+      }
+    } catch (err) {
+      setIsFavorited(!nextState);
+      alert(err.message || 'Failed to update favorite');
+    }
+  };
 
   if (loading) {
     return (
@@ -102,13 +140,29 @@ const PropertyDetails = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <button
           onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-teal-600 transition"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-teal-600 transition cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to listings</span>
         </button>
 
         <div className="flex items-center gap-2">
+          {/* Favorite Toggle Button */}
+          <button
+            type="button"
+            onClick={handleToggleFavorite}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition ${
+              isFavorited
+                ? 'bg-rose-50 border-rose-200 text-rose-700'
+                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            <Heart
+              className={`w-4 h-4 ${isFavorited ? 'text-rose-600 fill-rose-600' : 'text-slate-500'}`}
+            />
+            <span>{isFavorited ? 'Saved in Favorites' : 'Save to Favorites'}</span>
+          </button>
+
           {(isOwner || isAdmin) && (
             <Link to={`/owner/properties/edit/${property._id}`}>
               <Button variant="outline" size="sm" icon={<Edit className="w-3.5 h-3.5" />}>
@@ -147,7 +201,7 @@ const PropertyDetails = () => {
                   <button
                     key={idx}
                     onClick={() => setSelectedImage(idx)}
-                    className={`h-20 w-24 rounded-xl overflow-hidden shrink-0 border-2 transition ${
+                    className={`h-20 w-24 rounded-xl overflow-hidden shrink-0 border-2 transition cursor-pointer ${
                       selectedImage === idx
                         ? 'border-teal-600 ring-2 ring-teal-500/20'
                         : 'border-transparent opacity-70 hover:opacity-100'
