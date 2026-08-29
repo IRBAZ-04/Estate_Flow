@@ -14,6 +14,8 @@ import {
   PlusCircle,
   Building,
   Heart,
+  MessageSquare,
+  Calendar,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BackendStatusBadge from './BackendStatusBadge';
@@ -77,7 +79,7 @@ const Navbar = () => {
                 key={link.path}
                 to={link.path}
                 className={({ isActive }) =>
-                  `px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     isActive
                       ? 'text-teal-600 bg-teal-50/80 font-semibold'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
@@ -92,7 +94,7 @@ const Navbar = () => {
               <NavLink
                 to={getDashboardPath()}
                 className={({ isActive }) =>
-                  `px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     isActive
                       ? 'text-teal-600 bg-teal-50/80 font-semibold'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
@@ -103,35 +105,91 @@ const Navbar = () => {
               </NavLink>
             )}
 
-            {isAuthenticated && (
-              <NavLink
-                to="/favorites"
-                className={({ isActive }) =>
-                  `px-3.5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                    isActive
-                      ? 'text-rose-600 bg-rose-50/80 font-semibold'
-                      : 'text-slate-600 hover:text-rose-600 hover:bg-slate-100/70'
-                  }`
-                }
-              >
-                <Heart className="w-3.5 h-3.5 text-rose-500" />
-                <span>Favorites</span>
-              </NavLink>
+            {isAuthenticated && user?.role === 'owner' && (
+              <>
+                <NavLink
+                  to="/owner/properties"
+                  className={({ isActive }) =>
+                    `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'text-teal-600 bg-teal-50/80 font-semibold'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                    }`
+                  }
+                >
+                  My Properties
+                </NavLink>
+
+                <NavLink
+                  to="/owner/inquiries"
+                  className={({ isActive }) =>
+                    `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'text-teal-600 bg-teal-50/80 font-semibold'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                    }`
+                  }
+                >
+                  Inquiries
+                </NavLink>
+
+                <NavLink
+                  to="/owner/visits"
+                  className={({ isActive }) =>
+                    `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'text-teal-600 bg-teal-50/80 font-semibold'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                    }`
+                  }
+                >
+                  Visits
+                </NavLink>
+              </>
             )}
 
-            {user?.role === 'owner' && (
-              <NavLink
-                to="/owner/properties"
-                className={({ isActive }) =>
-                  `px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'text-teal-600 bg-teal-50/80 font-semibold'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
-                  }`
-                }
-              >
-                My Properties
-              </NavLink>
+            {isAuthenticated && user?.role === 'tenant' && (
+              <>
+                <NavLink
+                  to="/favorites"
+                  className={({ isActive }) =>
+                    `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
+                      isActive
+                        ? 'text-rose-600 bg-rose-50/80 font-semibold'
+                        : 'text-slate-600 hover:text-rose-600 hover:bg-slate-100/70'
+                    }`
+                  }
+                >
+                  <Heart className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Favorites</span>
+                </NavLink>
+
+                <NavLink
+                  to="/tenant/inquiries"
+                  className={({ isActive }) =>
+                    `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'text-teal-600 bg-teal-50/80 font-semibold'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                    }`
+                  }
+                >
+                  My Inquiries
+                </NavLink>
+
+                <NavLink
+                  to="/tenant/visits"
+                  className={({ isActive }) =>
+                    `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'text-teal-600 bg-teal-50/80 font-semibold'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                    }`
+                  }
+                >
+                  My Visits
+                </NavLink>
+              </>
             )}
           </nav>
 
@@ -191,7 +249,7 @@ const Navbar = () => {
                       <span>Saved Favorites</span>
                     </Link>
 
-                    {user?.role === 'owner' && (
+                    {user?.role === 'owner' ? (
                       <>
                         <Link
                           to="/owner/properties"
@@ -202,12 +260,47 @@ const Navbar = () => {
                           <span>My Properties</span>
                         </Link>
                         <Link
+                          to="/owner/inquiries"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-teal-600 transition"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 text-teal-600" />
+                          <span>Received Inquiries</span>
+                        </Link>
+                        <Link
+                          to="/owner/visits"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-teal-600 transition"
+                        >
+                          <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Visit Requests</span>
+                        </Link>
+                        <Link
                           to="/owner/properties/add"
                           onClick={() => setUserDropdownOpen(false)}
                           className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-teal-600 transition"
                         >
                           <PlusCircle className="w-3.5 h-3.5 text-emerald-600" />
                           <span>Add Property</span>
+                        </Link>
+                      </>
+                    ) : (
+                      <>
+                        <Link
+                          to="/tenant/inquiries"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-teal-600 transition"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 text-teal-600" />
+                          <span>My Sent Inquiries</span>
+                        </Link>
+                        <Link
+                          to="/tenant/visits"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-teal-600 transition"
+                        >
+                          <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                          <span>My Scheduled Visits</span>
                         </Link>
                       </>
                     )}
@@ -316,7 +409,7 @@ const Navbar = () => {
                 <span>Saved Favorites</span>
               </Link>
 
-              {user?.role === 'owner' && (
+              {user?.role === 'owner' ? (
                 <>
                   <Link
                     to="/owner/properties"
@@ -328,12 +421,41 @@ const Navbar = () => {
                   </Link>
 
                   <Link
-                    to="/owner/properties/add"
+                    to="/owner/inquiries"
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
                   >
-                    <PlusCircle className="w-4 h-4 text-emerald-600" />
-                    <span>Add New Property</span>
+                    <MessageSquare className="w-4 h-4 text-teal-600" />
+                    <span>Received Inquiries</span>
+                  </Link>
+
+                  <Link
+                    to="/owner/visits"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
+                  >
+                    <Calendar className="w-4 h-4 text-amber-600" />
+                    <span>Visit Requests</span>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/tenant/inquiries"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
+                  >
+                    <MessageSquare className="w-4 h-4 text-teal-600" />
+                    <span>My Sent Inquiries</span>
+                  </Link>
+
+                  <Link
+                    to="/tenant/visits"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
+                  >
+                    <Calendar className="w-4 h-4 text-amber-600" />
+                    <span>My Scheduled Visits</span>
                   </Link>
                 </>
               )}

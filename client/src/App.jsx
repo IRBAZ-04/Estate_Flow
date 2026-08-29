@@ -24,10 +24,16 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import OwnerDashboard from './pages/owner/OwnerDashboard';
 import TenantDashboard from './pages/tenant/TenantDashboard';
 
-// Owner Property Management Pages
+// Owner Property, Inquiry & Visit Management Pages
 import MyProperties from './pages/owner/MyProperties';
 import AddProperty from './pages/owner/AddProperty';
 import EditProperty from './pages/owner/EditProperty';
+import OwnerInquiries from './pages/owner/OwnerInquiries';
+import OwnerVisits from './pages/owner/OwnerVisits';
+
+// Tenant Inquiry & Visit Pages
+import MyInquiries from './pages/tenant/MyInquiries';
+import MyVisits from './pages/tenant/MyVisits';
 
 function App() {
   return (
@@ -63,6 +69,24 @@ function App() {
               }
             />
 
+            {/* Tenant Inquiries & Visits */}
+            <Route
+              path="tenant/inquiries"
+              element={
+                <ProtectedRoute>
+                  <MyInquiries />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="tenant/visits"
+              element={
+                <ProtectedRoute>
+                  <MyVisits />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Admin Dashboard */}
             <Route
               path="admin/dashboard"
@@ -73,7 +97,7 @@ function App() {
               }
             />
 
-            {/* Owner Portal & Property Management */}
+            {/* Owner Portal, Properties, Inquiries & Visits */}
             <Route
               path="owner/dashboard"
               element={
@@ -103,6 +127,22 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['owner', 'admin']}>
                   <EditProperty />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="owner/inquiries"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'admin']}>
+                  <OwnerInquiries />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="owner/visits"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'admin']}>
+                  <OwnerVisits />
                 </ProtectedRoute>
               }
             />

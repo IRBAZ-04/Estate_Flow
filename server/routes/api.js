@@ -5,12 +5,16 @@ const healthRoutes = require('./healthRoutes');
 const authRoutes = require('./authRoutes');
 const propertyRoutes = require('./propertyRoutes');
 const favoriteRoutes = require('./favoriteRoutes');
+const inquiryRoutes = require('./inquiryRoutes');
+const visitRoutes = require('./visitRoutes');
 
 // Mount routes
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
 router.use('/properties', propertyRoutes);
 router.use('/favorites', favoriteRoutes);
+router.use('/inquiries', inquiryRoutes);
+router.use('/visits', visitRoutes);
 
 // Master API index
 router.get('/', (req, res) => {
@@ -40,8 +44,21 @@ router.get('/', (req, res) => {
         remove: 'DELETE /api/favorites/:propertyId (Protected)',
         check: 'GET /api/favorites/check/:propertyId (Protected)',
       },
-      inquiries: '/api/inquiries (Available in Phase 5)',
-      visits: '/api/visits (Available in Phase 5)',
+      inquiries: {
+        list: 'GET /api/inquiries (Protected)',
+        create: 'POST /api/inquiries (Protected)',
+        details: 'GET /api/inquiries/:id (Protected)',
+        update: 'PUT /api/inquiries/:id (Protected)',
+        delete: 'DELETE /api/inquiries/:id (Protected)',
+      },
+      visits: {
+        list: 'GET /api/visits (Protected)',
+        create: 'POST /api/visits (Protected)',
+        details: 'GET /api/visits/:id (Protected)',
+        update: 'PUT /api/visits/:id (Protected: Owner Accept/Reject/Reschedule)',
+        cancel: 'PATCH /api/visits/:id/cancel (Protected: Requester)',
+        delete: 'DELETE /api/visits/:id (Protected)',
+      },
       agreements: '/api/agreements (Available in Phase 6)',
       payments: '/api/payments (Available in Phase 6)',
       maintenance: '/api/maintenance (Available in Phase 7)',

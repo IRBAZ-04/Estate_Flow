@@ -19,9 +19,16 @@ import {
   Tag,
   Share2,
   Heart,
+  X,
+  Clock,
+  Send,
+  AlertCircle,
+  Sparkles,
 } from 'lucide-react';
 import propertyService from '../services/propertyService';
 import favoriteService from '../services/favoriteService';
+import inquiryService from '../services/inquiryService';
+import visitService from '../services/visitService';
 import { useAuth } from '../context/AuthContext';
 import Loader from '../components/common/Loader';
 import Button from '../components/common/Button';
@@ -37,6 +44,29 @@ const PropertyDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(0);
+
+  // Inquiry Modal State
+  const [inquiryModalOpen, setInquiryModalOpen] = useState(false);
+  const [inquiryData, setInquiryData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    message: '',
+  });
+  const [inquirySubmitting, setInquirySubmitting] = useState(false);
+  const [inquirySuccess, setInquirySuccess] = useState(false);
+  const [inquiryError, setInquiryError] = useState('');
+
+  // Visit Modal State
+  const [visitModalOpen, setVisitModalOpen] = useState(false);
+  const [visitData, setVisitData] = useState({
+    date: '',
+    time: '10:00 AM',
+    notes: '',
+  });
+  const [visitSubmitting, setVisitSubmitting] = useState(false);
+  const [visitSuccess, setVisitSuccess] = useState(false);
+  const [visitError, setVisitError] = useState('');
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -69,9 +99,20 @@ const PropertyDetails = () => {
     checkFav();
   }, [id, isAuthenticated]);
 
+  useEffect(() => {
+    if (user) {
+      setInquiryData((prev) => ({
+        ...prev,
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+      }));
+    }
+  }, [user]);
+
   const handleToggleFavorite = async () => {
     if (!isAuthenticated) {
-      alert('Please sign in to save properties to your favorites.');
+      navigate('/login');
       return;
     }
 
@@ -87,6 +128,91 @@ const PropertyDetails = () => {
     } catch (err) {
       setIsFavorited(!nextState);
       alert(err.message || 'Failed to update favorite');
+    }
+  };
+
+  // Open Inquiry Dialog
+  const openInquiryModal = () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    setInquirySuccess(false);
+    setInquiryError('');
+    setInquiryData((prev) => ({
+      ...prev,
+      message: `Hi, I am interested in "${property?.title}". Please provide more details or let me know when we can discuss this property.`,
+    }));
+    setInquiryModalOpen(true);
+  };
+
+  // Submit Inquiry
+  const handleInquirySubmit = async (e) => {
+    e.preventDefault();
+    if (!inquiryData.message.trim()) {
+      setInquiryError('Please enter your inquiry message');
+      return;
+    }
+
+    setInquirySubmitting(true);
+    setInquiryError('');
+    try {
+      await inquiryService.createInquiry({
+        propertyId: id,
+        message: inquiryData.message,
+        name: inquiryData.name,
+        email: inquiryData.email,
+        phone: inquiryData.phone,
+      });
+      setInquirySuccess(true);
+    } catch (err) {
+      setInquiryError(err.message || 'Failed to send inquiry');
+    } finally {
+      setInquirySubmitting(false);
+    }
+  };
+
+  // Open Visit Dialog
+  const openVisitModal = () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    setVisitSuccess(false);
+    setVisitError('');
+    // Default to tomorrow
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    setVisitData({
+      date: tomorrow.toISOString().split('T')[0],
+      time: '10:00 AM',
+      notes: '',
+    });
+    setVisitModalOpen(true);
+  };
+
+  // Submit Visit
+  const handleVisitSubmit = async (e) => {
+    e.preventDefault();
+    if (!visitData.date || !visitData.time) {
+      setVisitError('Please select both a date and time slot for your visit');
+      return;
+    }
+
+    setVisitSubmitting(true);
+    setVisitError('');
+    try {
+      await visitService.createVisit({
+        propertyId: id,
+        date: visitData.date,
+        time: visitData.time,
+        notes: visitData.notes,
+      });
+      setVisitSuccess(true);
+    } catch (err) {
+      setVisitError(err.message || 'Failed to schedule property visit');
+    } finally {
+      setVisitSubmitting(false);
     }
   };
 
@@ -133,6 +259,18 @@ const PropertyDetails = () => {
     Rented: 'bg-blue-100 text-blue-800 border-blue-200',
     Sold: 'bg-purple-100 text-purple-800 border-purple-200',
   };
+
+  const timeSlots = [
+    '09:00 AM',
+    '10:00 AM',
+    '11:30 AM',
+    '02:00 PM',
+    '03:30 PM',
+    '05:00 PM',
+    '06:30 PM',
+  ];
+
+  const todayStr = new Date().toISOString().split('T')[0];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 space-y-8">
@@ -298,7 +436,7 @@ const PropertyDetails = () => {
           )}
         </div>
 
-        {/* Right Sidebar: Owner Contact Card & Action Workflows */}
+        {/* Right Sidebar: Owner Contact Card & Direct Communications */}
         <div className="space-y-6">
           {/* Owner Card */}
           <Card className="space-y-4 shadow-md">
@@ -328,27 +466,30 @@ const PropertyDetails = () => {
               )}
             </div>
 
-            <div className="pt-2 border-t border-slate-100 space-y-2">
-              <Button
-                variant="primary"
-                size="md"
-                className="w-full"
-                icon={<Calendar className="w-4 h-4" />}
-                onClick={() => alert('Visit Scheduling will be active in Phase 5!')}
-              >
-                Schedule a Visit
-              </Button>
+            {/* Direct Action Buttons */}
+            {!isOwner && (
+              <div className="pt-2 border-t border-slate-100 space-y-2">
+                <Button
+                  variant="primary"
+                  size="md"
+                  className="w-full"
+                  icon={<Calendar className="w-4 h-4" />}
+                  onClick={openVisitModal}
+                >
+                  Schedule a Visit
+                </Button>
 
-              <Button
-                variant="outline"
-                size="md"
-                className="w-full"
-                icon={<MessageSquare className="w-4 h-4" />}
-                onClick={() => alert('Inquiries messaging will be active in Phase 5!')}
-              >
-                Send Direct Inquiry
-              </Button>
-            </div>
+                <Button
+                  variant="outline"
+                  size="md"
+                  className="w-full"
+                  icon={<MessageSquare className="w-4 h-4" />}
+                  onClick={openInquiryModal}
+                >
+                  Send Direct Inquiry
+                </Button>
+              </div>
+            )}
           </Card>
 
           {/* Quick Property Spec Summary */}
@@ -379,6 +520,255 @@ const PropertyDetails = () => {
           </Card>
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* MODAL 1: SEND INQUIRY DIALOG                                              */}
+      {/* ========================================================================= */}
+      {inquiryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-teal-50 text-teal-600">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Send Inquiry to Owner</h3>
+                  <p className="text-[11px] text-slate-500 truncate max-w-xs">{property.title}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setInquiryModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {inquirySuccess ? (
+              <div className="py-8 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <h4 className="font-bold text-sm text-slate-900">Inquiry Sent Successfully!</h4>
+                <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                  The property owner has been notified and will reply to your registered contact details.
+                </p>
+                <div className="pt-2 flex justify-center gap-2">
+                  <Link to="/tenant/inquiries">
+                    <Button variant="primary" size="sm">
+                      View My Inquiries
+                    </Button>
+                  </Link>
+                  <Button variant="outline" size="sm" onClick={() => setInquiryModalOpen(false)}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleInquirySubmit} className="space-y-3 text-xs">
+                {inquiryError && (
+                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{inquiryError}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Your Name</label>
+                    <input
+                      type="text"
+                      value={inquiryData.name}
+                      onChange={(e) => setInquiryData({ ...inquiryData, name: e.target.value })}
+                      required
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Your Phone</label>
+                    <input
+                      type="text"
+                      value={inquiryData.phone}
+                      onChange={(e) => setInquiryData({ ...inquiryData, phone: e.target.value })}
+                      placeholder="+91 98765 43210"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Your Email</label>
+                  <input
+                    type="email"
+                    value={inquiryData.email}
+                    onChange={(e) => setInquiryData({ ...inquiryData, email: e.target.value })}
+                    required
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Message</label>
+                  <textarea
+                    rows={4}
+                    value={inquiryData.message}
+                    onChange={(e) => setInquiryData({ ...inquiryData, message: e.target.value })}
+                    placeholder="Write your questions regarding the property..."
+                    required
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500 resize-none"
+                  ></textarea>
+                </div>
+
+                <div className="pt-2 flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setInquiryModalOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="sm"
+                    loading={inquirySubmitting}
+                    icon={<Send className="w-3.5 h-3.5" />}
+                  >
+                    Send Inquiry
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 2: SCHEDULE VISIT DIALOG                                            */}
+      {/* ========================================================================= */}
+      {visitModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-teal-50 text-teal-600">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Schedule a Property Visit</h3>
+                  <p className="text-[11px] text-slate-500 truncate max-w-xs">{property.title}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setVisitModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {visitSuccess ? (
+              <div className="py-8 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <h4 className="font-bold text-sm text-slate-900">Visit Appointment Requested!</h4>
+                <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                  Your visit request for <strong>{visitData.date}</strong> at <strong>{visitData.time}</strong> has been submitted. The owner will review and confirm.
+                </p>
+                <div className="pt-2 flex justify-center gap-2">
+                  <Link to="/tenant/visits">
+                    <Button variant="primary" size="sm">
+                      View My Scheduled Visits
+                    </Button>
+                  </Link>
+                  <Button variant="outline" size="sm" onClick={() => setVisitModalOpen(false)}>
+                    Done
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleVisitSubmit} className="space-y-3 text-xs">
+                {visitError && (
+                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{visitError}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Appointment Date
+                    </label>
+                    <input
+                      type="date"
+                      min={todayStr}
+                      value={visitData.date}
+                      onChange={(e) => setVisitData({ ...visitData, date: e.target.value })}
+                      required
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Preferred Time Slot
+                    </label>
+                    <select
+                      value={visitData.time}
+                      onChange={(e) => setVisitData({ ...visitData, time: e.target.value })}
+                      required
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500 bg-white"
+                    >
+                      {timeSlots.map((slot) => (
+                        <option key={slot} value={slot}>
+                          {slot}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Special Notes for Owner (Optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={visitData.notes}
+                    onChange={(e) => setVisitData({ ...visitData, notes: e.target.value })}
+                    placeholder="e.g. Will be visiting with family, requesting parking space..."
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500 resize-none"
+                  ></textarea>
+                </div>
+
+                <div className="pt-2 flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setVisitModalOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="sm"
+                    loading={visitSubmitting}
+                    icon={<Calendar className="w-3.5 h-3.5" />}
+                  >
+                    Confirm Visit Request
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
