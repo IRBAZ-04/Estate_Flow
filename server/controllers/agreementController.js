@@ -1,6 +1,7 @@
 const Agreement = require('../models/Agreement');
 const Property = require('../models/Property');
 const User = require('../models/User');
+const notify = require('../utils/notify');
 
 /**
  * @desc    Create a new rental agreement
@@ -103,6 +104,16 @@ const createAgreement = async (req, res, next) => {
       property.status = 'Rented';
       await property.save();
     }
+
+    // Notify Tenant
+    await notify({
+      recipient: tenantUser._id,
+      type: 'agreement_created',
+      title: 'New Rental Agreement Created',
+      message: `${req.user.name} created a residential lease agreement for "${property.title}" (₹ ${monthlyRent}/mo).`,
+      relatedId: agreement._id,
+      link: `/agreements/${agreement._id}`,
+    });
 
     const populatedAgreement = await Agreement.findById(agreement._id)
       .populate('property', 'title location address price purpose images status')

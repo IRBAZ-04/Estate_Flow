@@ -1,5 +1,6 @@
 const Payment = require('../models/Payment');
 const Agreement = require('../models/Agreement');
+const notify = require('../utils/notify');
 
 /**
  * @desc    Record a new payment transaction
@@ -26,7 +27,7 @@ const createPayment = async (req, res, next) => {
       });
     }
 
-    const agreement = await Agreement.findById(agreementId);
+    const agreement = await Agreement.findById(agreementId).populate('property');
     if (!agreement) {
       return res.status(404).json({
         success: false,
@@ -65,6 +66,18 @@ const createPayment = async (req, res, next) => {
       transactionReference: txnRef,
       notes: notes ? notes.trim() : undefined,
     });
+
+    // Notify Owner if Tenant recorded payment
+    if (isTenant) {
+      await notify({
+        recipient: agreement.owner,
+        type: 'payment_recorded',
+        title: 'Payment Received',
+        message: `${req.user.name} recorded a ${paymentType} payment of ₹ ${amount} for ${month} (${txnRef}).`,
+        relatedId: payment._id,
+        link: '/payments',
+      });
+    }
 
     const populatedPayment = await Payment.findById(payment._id)
       .populate('property', 'title location price purpose')
@@ -227,6 +240,16 @@ const updatePaymentStatus = async (req, res, next) => {
       .populate('property', 'title location price')
       .populate('tenant', 'name email phone')
       .populate('owner', 'name email phone');
+
+    // Notify Tenant
+    await notify({
+      recipient: payment.tenant._id,
+      type: 'payment_updated',
+      title: `Payment Status: ${payment.status}`,
+      message: `Your payment record (${payment.transactionReference}) status has been updated to "${payment.status}".`,
+      relatedId: payment._id,
+      link: '/payments',
+    });
 
     return res.status(200).json({
       success: true,

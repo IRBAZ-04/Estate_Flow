@@ -1,5 +1,6 @@
 const Inquiry = require('../models/Inquiry');
 const Property = require('../models/Property');
+const notify = require('../utils/notify');
 
 /**
  * @desc    Create a new property inquiry
@@ -13,7 +14,7 @@ const createInquiry = async (req, res, next) => {
     if (!propertyId || !message || message.trim() === '') {
       return res.status(400).json({
         success: false,
-        message: 'Please provide both propertyId and an inquiry message',
+        message: 'Please provide a valid propertyId and an inquiry message',
       });
     }
 
@@ -25,33 +26,43 @@ const createInquiry = async (req, res, next) => {
       });
     }
 
-    // Prevent owner from inquiring on their own property
+    // Prevent owner inquiring on their own property
     if (property.owner.toString() === req.user._id.toString()) {
       return res.status(400).json({
         success: false,
-        message: 'You cannot submit an inquiry for your own property listing',
+        message: 'You cannot send an inquiry on your own property',
       });
     }
 
     const inquiry = await Inquiry.create({
+      property: property._id,
       user: req.user._id,
       owner: property.owner,
-      property: property._id,
-      name: name || req.user.name,
-      email: email || req.user.email,
+      name: name || req.user.name || 'User',
+      email: email || req.user.email || 'user@email.com',
       phone: phone || req.user.phone || '',
       message: message.trim(),
       status: 'Pending',
     });
 
+    // Notify Property Owner
+    await notify({
+      recipient: property.owner,
+      type: 'inquiry_received',
+      title: 'New Property Inquiry',
+      message: `${req.user.name} sent an inquiry for "${property.title}": "${message.trim().slice(0, 80)}..."`,
+      relatedId: inquiry._id,
+      link: '/owner/inquiries',
+    });
+
     const populatedInquiry = await Inquiry.findById(inquiry._id)
       .populate('property', 'title location price purpose images')
-      .populate('owner', 'name email phone profileImage')
-      .populate('user', 'name email phone');
+      .populate('user', 'name email phone profileImage')
+      .populate('owner', 'name email phone');
 
     return res.status(201).json({
       success: true,
-      message: 'Inquiry submitted successfully to property owner',
+      message: 'Inquiry submitted successfully to the property owner',
       data: populatedInquiry,
     });
   } catch (error) {
@@ -60,19 +71,17 @@ const createInquiry = async (req, res, next) => {
 };
 
 /**
- * @desc    Get inquiries for the current logged-in user
+ * @desc    Get inquiries for current logged-in user
  * @route   GET /api/inquiries
  * @access  Private
  */
 const getInquiries = async (req, res, next) => {
   try {
-    const { type } = req.query; // 'sent' or 'received'
+    const { type } = req.query;
     let query = {};
 
     if (req.user.role === 'admin') {
-      if (type === 'sent') query = { user: req.user._id };
-      else if (type === 'received') query = { owner: req.user._id };
-      else query = {}; // all inquiries
+      query = {};
     } else if (req.user.role === 'owner') {
       if (type === 'sent') {
         query = { user: req.user._id };
@@ -80,14 +89,13 @@ const getInquiries = async (req, res, next) => {
         query = { owner: req.user._id };
       }
     } else {
-      // Tenants only see their sent inquiries
       query = { user: req.user._id };
     }
 
     const inquiries = await Inquiry.find(query)
       .populate('property', 'title location price purpose images status')
-      .populate('owner', 'name email phone profileImage')
       .populate('user', 'name email phone profileImage')
+      .populate('owner', 'name email phone profileImage')
       .sort({ createdAt: -1 });
 
     return res.status(200).json({
@@ -101,16 +109,16 @@ const getInquiries = async (req, res, next) => {
 };
 
 /**
- * @desc    Get single inquiry by ID
+ * @desc    Get single inquiry details
  * @route   GET /api/inquiries/:id
  * @access  Private
  */
 const getInquiryById = async (req, res, next) => {
   try {
     const inquiry = await Inquiry.findById(req.params.id)
-      .populate('property', 'title location price purpose images address')
-      .populate('owner', 'name email phone profileImage')
-      .populate('user', 'name email phone profileImage');
+      .populate('property', 'title location price purpose images')
+      .populate('user', 'name email phone profileImage')
+      .populate('owner', 'name email phone profileImage');
 
     if (!inquiry) {
       return res.status(404).json({
@@ -126,7 +134,7 @@ const getInquiryById = async (req, res, next) => {
     if (!isSender && !isOwner && !isAdmin) {
       return res.status(403).json({
         success: false,
-        message: 'Unauthorized to view this inquiry',
+        message: 'Unauthorized: You do not have access to this inquiry',
       });
     }
 
@@ -140,13 +148,13 @@ const getInquiryById = async (req, res, next) => {
 };
 
 /**
- * @desc    Update inquiry status or reply (Owner status update or Tenant close)
+ * @desc    Update inquiry status or reply (Owner/Admin)
  * @route   PUT /api/inquiries/:id
  * @access  Private
  */
-const updateInquiryStatus = async (req, res, next) => {
+const updateInquiry = async (req, res, next) => {
   try {
-    const { status, responseMessage } = req.body;
+    const { status, reply, responseMessage } = req.body;
     let inquiry = await Inquiry.findById(req.params.id);
 
     if (!inquiry) {
@@ -156,20 +164,20 @@ const updateInquiryStatus = async (req, res, next) => {
       });
     }
 
-    const isSender = inquiry.user.toString() === req.user._id.toString();
     const isOwner = inquiry.owner.toString() === req.user._id.toString();
+    const isSender = inquiry.user.toString() === req.user._id.toString();
     const isAdmin = req.user.role === 'admin';
 
-    if (!isSender && !isOwner && !isAdmin) {
+    if (!isOwner && !isSender && !isAdmin) {
       return res.status(403).json({
         success: false,
-        message: 'Unauthorized: You cannot modify this inquiry',
+        message: 'Unauthorized: You cannot update this inquiry',
       });
     }
 
     const updates = {};
+    const replyText = reply || responseMessage;
 
-    // If owner or admin is updating
     if (isOwner || isAdmin) {
       if (status) {
         if (!['Pending', 'Contacted', 'Accepted', 'Rejected', 'Closed'].includes(status)) {
@@ -180,30 +188,44 @@ const updateInquiryStatus = async (req, res, next) => {
         }
         updates.status = status;
       }
-      if (responseMessage !== undefined) {
-        updates.responseMessage = responseMessage.trim();
+      if (replyText) {
+        updates.responseMessage = replyText.trim();
+        updates.status = updates.status || 'Contacted';
       }
     } else if (isSender) {
-      // Sender can only close the inquiry
-      if (status && status !== 'Closed') {
-        return res.status(403).json({
-          success: false,
-          message: 'As sender, you can only set status to Closed',
-        });
-      }
       if (status === 'Closed') {
         updates.status = 'Closed';
+      } else {
+        return res.status(403).json({
+          success: false,
+          message: 'Inquirers can only mark an inquiry as Closed',
+        });
       }
     }
+
+    const originalUserId = inquiry.user;
 
     inquiry = await Inquiry.findByIdAndUpdate(
       req.params.id,
       { $set: updates },
       { new: true, runValidators: true }
     )
-      .populate('property', 'title location price purpose images')
-      .populate('owner', 'name email phone')
-      .populate('user', 'name email phone');
+      .populate('property', 'title location price')
+      .populate('user', 'name email phone')
+      .populate('owner', 'name email phone');
+
+    // Notify Inquiry Sender on update
+    if (isOwner || isAdmin) {
+      const recipientId = inquiry.user?._id || originalUserId;
+      await notify({
+        recipient: recipientId,
+        type: 'inquiry_updated',
+        title: `Inquiry Update: ${inquiry.status}`,
+        message: `The owner updated your inquiry on "${inquiry.property?.title}": ${replyText ? `"${replyText.trim()}"` : `Status changed to ${inquiry.status}`}`,
+        relatedId: inquiry._id,
+        link: '/tenant/inquiries',
+      });
+    }
 
     return res.status(200).json({
       success: true,
@@ -232,12 +254,13 @@ const deleteInquiry = async (req, res, next) => {
     }
 
     const isSender = inquiry.user.toString() === req.user._id.toString();
+    const isOwner = inquiry.owner.toString() === req.user._id.toString();
     const isAdmin = req.user.role === 'admin';
 
-    if (!isSender && !isAdmin) {
+    if (!isSender && !isOwner && !isAdmin) {
       return res.status(403).json({
         success: false,
-        message: 'Unauthorized to delete this inquiry',
+        message: 'Unauthorized: You cannot delete this inquiry',
       });
     }
 
@@ -257,6 +280,6 @@ module.exports = {
   createInquiry,
   getInquiries,
   getInquiryById,
-  updateInquiryStatus,
+  updateInquiry,
   deleteInquiry,
 };

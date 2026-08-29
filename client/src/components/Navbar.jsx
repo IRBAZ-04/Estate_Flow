@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import {
   Building2,
@@ -19,15 +19,52 @@ import {
   FileText,
   CreditCard,
   TrendingUp,
+  Wrench,
+  Bell,
+  CheckCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BackendStatusBadge from './BackendStatusBadge';
+import notificationService from '../services/notificationService';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+
+  // Notification Bell State
+  const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchNotifs = async () => {
+    if (!isAuthenticated) return;
+    try {
+      const res = await notificationService.getNotifications();
+      setNotifications(res.data || []);
+      setUnreadCount(res.unreadCount || 0);
+    } catch (err) {
+      // Quiet fail in background
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifs();
+    // Poll every 30 seconds if authenticated
+    const interval = setInterval(fetchNotifs, 30000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
+  const handleMarkAllNotifsRead = async () => {
+    try {
+      await notificationService.markAllAsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const navLinks = [
     { name: 'Home', path: '/' },
@@ -46,6 +83,7 @@ const Navbar = () => {
   const handleLogout = () => {
     logout();
     setUserDropdownOpen(false);
+    setNotifDropdownOpen(false);
     setMobileMenuOpen(false);
     navigate('/');
   };
@@ -135,6 +173,19 @@ const Navbar = () => {
                 >
                   Payments
                 </NavLink>
+
+                <NavLink
+                  to={user?.role === 'owner' ? '/owner/maintenance' : '/tenant/maintenance'}
+                  className={({ isActive }) =>
+                    `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'text-teal-600 bg-teal-50/80 font-semibold'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                    }`
+                  }
+                >
+                  Maintenance
+                </NavLink>
               </>
             )}
 
@@ -158,12 +209,107 @@ const Navbar = () => {
           <div className="hidden md:flex items-center gap-3">
             <BackendStatusBadge />
 
+            {/* Notification Bell */}
+            {isAuthenticated && (
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setNotifDropdownOpen(!notifDropdownOpen);
+                    setUserDropdownOpen(false);
+                  }}
+                  className="relative p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-teal-600 transition shadow-2xs"
+                  aria-label="View notifications"
+                >
+                  <Bell className="w-4 h-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center animate-pulse">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notifications Dropdown Popover */}
+                {notifDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 z-50 text-xs">
+                    <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 font-bold text-slate-900">
+                        <Bell className="w-3.5 h-3.5 text-teal-600" />
+                        <span>Notifications ({unreadCount} Unread)</span>
+                      </div>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={handleMarkAllNotifsRead}
+                          className="text-[11px] text-teal-600 hover:underline font-semibold"
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="max-h-72 overflow-y-auto divide-y divide-slate-50">
+                      {notifications.length === 0 ? (
+                        <div className="py-8 text-center text-slate-400">
+                          <p>No notifications yet</p>
+                        </div>
+                      ) : (
+                        notifications.slice(0, 5).map((n) => (
+                          <Link
+                            key={n._id}
+                            to={n.link || '/notifications'}
+                            onClick={() => setNotifDropdownOpen(false)}
+                            className={`block p-3 hover:bg-slate-50 transition ${
+                              !n.read ? 'bg-teal-50/40' : ''
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <span
+                                className={`font-bold ${
+                                  !n.read ? 'text-slate-900' : 'text-slate-700'
+                                }`}
+                              >
+                                {n.title}
+                              </span>
+                              {!n.read && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-teal-600 mt-1 shrink-0"></span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-500 line-clamp-2 mt-0.5">
+                              {n.message}
+                            </p>
+                            <span className="text-[10px] text-slate-400 block mt-1">
+                              {new Date(n.createdAt).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </Link>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="p-2 border-t border-slate-100 text-center">
+                      <Link
+                        to="/notifications"
+                        onClick={() => setNotifDropdownOpen(false)}
+                        className="text-xs font-bold text-teal-600 hover:underline block py-1"
+                      >
+                        View All Activity Feed →
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="h-5 w-px bg-slate-200 mx-1"></div>
 
             {isAuthenticated ? (
               <div className="relative">
                 <button
-                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  onClick={() => {
+                    setUserDropdownOpen(!userDropdownOpen);
+                    setNotifDropdownOpen(false);
+                  }}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition shadow-2xs cursor-pointer"
                 >
                   <div className="w-7 h-7 rounded-lg bg-teal-600 text-white font-bold text-xs flex items-center justify-center">
@@ -202,6 +348,15 @@ const Navbar = () => {
                     </Link>
 
                     <Link
+                      to="/notifications"
+                      onClick={() => setUserDropdownOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-teal-600 transition"
+                    >
+                      <Bell className="w-3.5 h-3.5 text-teal-600" />
+                      <span>Notifications ({unreadCount})</span>
+                    </Link>
+
+                    <Link
                       to="/agreements"
                       onClick={() => setUserDropdownOpen(false)}
                       className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-teal-600 transition"
@@ -230,6 +385,14 @@ const Navbar = () => {
 
                     {user?.role === 'owner' ? (
                       <>
+                        <Link
+                          to="/owner/maintenance"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-rose-600 transition"
+                        >
+                          <Wrench className="w-3.5 h-3.5 text-rose-500" />
+                          <span>Maintenance Requests</span>
+                        </Link>
                         <Link
                           to="/owner/finances"
                           onClick={() => setUserDropdownOpen(false)}
@@ -262,17 +425,17 @@ const Navbar = () => {
                           <Calendar className="w-3.5 h-3.5 text-amber-600" />
                           <span>Visit Requests</span>
                         </Link>
-                        <Link
-                          to="/owner/agreements/create"
-                          onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-teal-600 transition"
-                        >
-                          <PlusCircle className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>Create Agreement</span>
-                        </Link>
                       </>
                     ) : (
                       <>
+                        <Link
+                          to="/tenant/maintenance"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-rose-600 transition"
+                        >
+                          <Wrench className="w-3.5 h-3.5 text-rose-500" />
+                          <span>My Maintenance</span>
+                        </Link>
                         <Link
                           to="/tenant/inquiries"
                           onClick={() => setUserDropdownOpen(false)}
@@ -388,6 +551,15 @@ const Navbar = () => {
               </Link>
 
               <Link
+                to="/notifications"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
+              >
+                <Bell className="w-4 h-4 text-teal-600" />
+                <span>Notifications ({unreadCount})</span>
+              </Link>
+
+              <Link
                 to="/agreements"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
@@ -406,6 +578,15 @@ const Navbar = () => {
               </Link>
 
               <Link
+                to={user?.role === 'owner' ? '/owner/maintenance' : '/tenant/maintenance'}
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
+              >
+                <Wrench className="w-4 h-4 text-rose-600" />
+                <span>Maintenance Requests</span>
+              </Link>
+
+              <Link
                 to="/favorites"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
@@ -413,28 +594,6 @@ const Navbar = () => {
                 <Heart className="w-4 h-4 text-rose-500" />
                 <span>Saved Favorites</span>
               </Link>
-
-              {user?.role === 'owner' ? (
-                <>
-                  <Link
-                    to="/owner/finances"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
-                  >
-                    <TrendingUp className="w-4 h-4 text-emerald-600" />
-                    <span>Financial Overview</span>
-                  </Link>
-
-                  <Link
-                    to="/owner/properties"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
-                  >
-                    <Building className="w-4 h-4 text-cyan-600" />
-                    <span>My Properties</span>
-                  </Link>
-                </>
-              ) : null}
 
               <Link
                 to="/profile"

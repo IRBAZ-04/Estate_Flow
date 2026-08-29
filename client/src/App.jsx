@@ -15,12 +15,19 @@ import Register from './pages/Register';
 import Unauthorized from './pages/Unauthorized';
 import NotFound from './pages/NotFound';
 
-// Protected User Profile, Favorites, Agreements & Payments
+// Protected User Profile, Favorites, Notifications, Agreements & Payments
 import Profile from './pages/Profile';
 import Favorites from './pages/Favorites';
+import Notifications from './pages/Notifications';
 import AgreementsList from './pages/agreements/AgreementsList';
 import AgreementDetails from './pages/agreements/AgreementDetails';
 import PaymentHistory from './pages/payments/PaymentHistory';
+
+// Maintenance Pages
+import SubmitMaintenance from './pages/maintenance/SubmitMaintenance';
+import MaintenanceDetails from './pages/maintenance/MaintenanceDetails';
+import MyMaintenance from './pages/tenant/MyMaintenance';
+import OwnerMaintenance from './pages/owner/OwnerMaintenance';
 
 // Dashboards
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -56,7 +63,7 @@ function App() {
             <Route path="register" element={<Register />} />
             <Route path="unauthorized" element={<Unauthorized />} />
 
-            {/* Authenticated Profile, Favorites, Agreements & Payments */}
+            {/* Authenticated Profile, Favorites, Notifications, Agreements & Payments */}
             <Route
               path="profile"
               element={
@@ -70,6 +77,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Favorites />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="notifications"
+              element={
+                <ProtectedRoute>
+                  <Notifications />
                 </ProtectedRoute>
               }
             />
@@ -98,11 +113,45 @@ function App() {
               }
             />
 
+            {/* Maintenance Requests */}
+            <Route
+              path="maintenance/submit"
+              element={
+                <ProtectedRoute>
+                  <SubmitMaintenance />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="maintenance/:id"
+              element={
+                <ProtectedRoute>
+                  <MaintenanceDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="tenant/maintenance"
+              element={
+                <ProtectedRoute allowedRoles={['tenant', 'admin']}>
+                  <MyMaintenance />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="owner/maintenance"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'admin']}>
+                  <OwnerMaintenance />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Tenant Inquiries & Visits */}
             <Route
               path="tenant/inquiries"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={['tenant', 'admin']}>
                   <MyInquiries />
                 </ProtectedRoute>
               }
@@ -110,7 +159,7 @@ function App() {
             <Route
               path="tenant/visits"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={['tenant', 'admin']}>
                   <MyVisits />
                 </ProtectedRoute>
               }

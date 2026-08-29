@@ -9,6 +9,8 @@ const inquiryRoutes = require('./inquiryRoutes');
 const visitRoutes = require('./visitRoutes');
 const agreementRoutes = require('./agreementRoutes');
 const paymentRoutes = require('./paymentRoutes');
+const maintenanceRoutes = require('./maintenanceRoutes');
+const notificationRoutes = require('./notificationRoutes');
 
 // Mount routes
 router.use('/health', healthRoutes);
@@ -19,6 +21,8 @@ router.use('/inquiries', inquiryRoutes);
 router.use('/visits', visitRoutes);
 router.use('/agreements', agreementRoutes);
 router.use('/payments', paymentRoutes);
+router.use('/maintenance', maintenanceRoutes);
+router.use('/notifications', notificationRoutes);
 
 // Master API index
 router.get('/', (req, res) => {
@@ -76,8 +80,18 @@ router.get('/', (req, res) => {
         details: 'GET /api/payments/:id (Protected)',
         update: 'PUT /api/payments/:id (Protected: Owner/Admin)',
       },
-      maintenance: '/api/maintenance (Available in Phase 7)',
-      notifications: '/api/notifications (Available in Phase 7)',
+      maintenance: {
+        list: 'GET /api/maintenance (Protected)',
+        create: 'POST /api/maintenance (Protected: Tenant/Admin)',
+        details: 'GET /api/maintenance/:id (Protected)',
+        update: 'PUT /api/maintenance/:id (Protected)',
+      },
+      notifications: {
+        list: 'GET /api/notifications (Protected)',
+        readAll: 'PUT /api/notifications/read-all (Protected)',
+        read: 'PUT /api/notifications/:id/read (Protected)',
+        delete: 'DELETE /api/notifications/:id (Protected)',
+      },
       admin: '/api/admin (Available in Phase 8)',
     },
   });

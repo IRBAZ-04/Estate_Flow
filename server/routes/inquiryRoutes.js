@@ -4,7 +4,7 @@ const {
   createInquiry,
   getInquiries,
   getInquiryById,
-  updateInquiryStatus,
+  updateInquiry,
   deleteInquiry,
 } = require('../controllers/inquiryController');
 const { protect } = require('../middleware/auth');
@@ -15,7 +15,7 @@ router.use(protect);
 router.post('/', createInquiry);
 router.get('/', getInquiries);
 router.get('/:id', getInquiryById);
-router.put('/:id', updateInquiryStatus);
+router.put('/:id', updateInquiry);
 router.delete('/:id', deleteInquiry);
 
 module.exports = router;

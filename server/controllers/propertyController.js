@@ -1,4 +1,5 @@
 const Property = require('../models/Property');
+const notify = require('../utils/notify');
 
 /**
  * @desc    Get all public approved/available properties with multi-parameter search, filtering, sorting, and pagination
@@ -24,17 +25,14 @@ const getPublicProperties = async (req, res, next) => {
       limit = 9,
     } = req.query;
 
-    // Filter only approved/available properties by default for public consumption
     const query = {
       status: { $in: ['Approved', 'Available'] },
     };
 
-    // If specific availability is requested (e.g. 'Available', 'Rented', 'Sold')
     if (availability && availability !== 'All') {
       query.status = availability;
     }
 
-    // Keyword search over title, description, location, or address
     if (keyword && keyword.trim() !== '') {
       const cleanKeyword = keyword.trim();
       query.$or = [
@@ -45,35 +43,28 @@ const getPublicProperties = async (req, res, next) => {
       ];
     }
 
-    // Specific location filter
     if (location && location.trim() !== '' && location !== 'All') {
       query.location = { $regex: location.trim(), $options: 'i' };
     }
 
-    // Property Type filter
     if (propertyType && propertyType !== 'All') {
       query.propertyType = propertyType;
     }
 
-    // Purpose filter (Rent / Sale)
     if (purpose && purpose !== 'All') {
       query.purpose = purpose;
     }
 
-    // Furnishing Status filter
     if (furnishingStatus && furnishingStatus !== 'All') {
       query.furnishingStatus = furnishingStatus;
     }
 
-    // Parking filter
     if (parking && parking !== 'All') {
       query.parking = parking;
     }
 
-    // Bedrooms filter
     if (bedrooms && bedrooms !== 'All' && !isNaN(bedrooms)) {
       const bedCount = Number(bedrooms);
-      // If 4+, match greater than or equal to 4
       if (bedCount >= 4) {
         query.bedrooms = { $gte: 4 };
       } else {
@@ -81,7 +72,6 @@ const getPublicProperties = async (req, res, next) => {
       }
     }
 
-    // Bathrooms filter
     if (bathrooms && bathrooms !== 'All' && !isNaN(bathrooms)) {
       const bathCount = Number(bathrooms);
       if (bathCount >= 3) {
@@ -91,21 +81,18 @@ const getPublicProperties = async (req, res, next) => {
       }
     }
 
-    // Price range filters
     if (minPrice || maxPrice) {
       query.price = {};
       if (minPrice && !isNaN(minPrice)) query.price.$gte = Number(minPrice);
       if (maxPrice && !isNaN(maxPrice)) query.price.$lte = Number(maxPrice);
     }
 
-    // Sorting presets
-    let sortOptions = { createdAt: -1 }; // Default: newest first
+    let sortOptions = { createdAt: -1 };
     if (sortBy === 'price_asc') sortOptions = { price: 1 };
     if (sortBy === 'price_desc') sortOptions = { price: -1 };
     if (sortBy === 'oldest') sortOptions = { createdAt: 1 };
     if (sortBy === 'area_desc') sortOptions = { area: -1 };
 
-    // Pagination calculations
     const pageNumber = Math.max(1, parseInt(page, 10) || 1);
     const pageSize = Math.max(1, Math.min(50, parseInt(limit, 10) || 9));
     const skip = (pageNumber - 1) * pageSize;
@@ -452,6 +439,17 @@ const updatePropertyStatus = async (req, res, next) => {
     if (req.user.role === 'admin') {
       property.status = status;
       await property.save();
+
+      // Notify Property Owner
+      await notify({
+        recipient: property.owner,
+        type: 'property_approval',
+        title: `Property Status: ${status}`,
+        message: `Your property listing "${property.title}" has been ${status.toLowerCase()} by the platform administrator.`,
+        relatedId: property._id,
+        link: `/properties/${property._id}`,
+      });
+
       return res.status(200).json({
         success: true,
         message: `Property status changed to '${status}' by Admin`,
