@@ -1,21 +1,61 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Mail, Lock, User, UserCheck, Sparkles, Building2, Shield } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Mail, Lock, User, UserCheck, Sparkles, Building2, AlertCircle, Phone, Eye, EyeOff } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
 
 const Register = () => {
+  const { register } = useAuth();
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     password: '',
-    role: 'tenant', // 'tenant' | 'owner' | 'admin'
+    confirmPassword: '',
+    role: 'tenant', // 'tenant' | 'owner'
   });
-  const [infoNotice, setInfoNotice] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setInfoNotice(true);
+    setError(null);
+
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setLoading(true);
+
+    const res = await register({
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      password: formData.password,
+      role: formData.role,
+    });
+
+    setLoading(false);
+
+    if (res.success) {
+      if (res.user.role === 'owner') {
+        navigate('/owner/dashboard', { replace: true });
+      } else {
+        navigate('/tenant/dashboard', { replace: true });
+      }
+    } else {
+      setError(res.message);
+    }
   };
 
   return (
@@ -26,30 +66,58 @@ const Register = () => {
             <Building2 className="w-6 h-6" />
           </div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            Create an Account
+            Create Your Account
           </h1>
           <p className="text-xs text-slate-500">
-            Join EstateFlow as an Owner, Tenant, or Administrator
+            Join EstateFlow to search, list, or manage properties
           </p>
         </div>
 
         <Card padding="p-6 sm:p-8" className="shadow-lg">
-          {infoNotice && (
-            <div className="mb-6 p-4 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-xs flex items-start gap-2.5">
-              <Sparkles className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold">Phase 1 Foundation Ready</p>
-                <p className="text-teal-700 mt-0.5">
-                  User registration with MongoDB persistent storage and bcrypt hashing will be connected in Phase 2.
-                </p>
-              </div>
+          {error && (
+            <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-center gap-2.5 animate-shake">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Full Name
+                Account Type
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, role: 'tenant' })}
+                  className={`p-3 rounded-xl border text-xs font-medium text-left transition flex flex-col gap-0.5 ${
+                    formData.role === 'tenant'
+                      ? 'border-teal-600 bg-teal-50/70 text-teal-900 font-semibold ring-2 ring-teal-500/20'
+                      : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="font-bold">Tenant / Buyer</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Search & rent</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, role: 'owner' })}
+                  className={`p-3 rounded-xl border text-xs font-medium text-left transition flex flex-col gap-0.5 ${
+                    formData.role === 'owner'
+                      ? 'border-teal-600 bg-teal-50/70 text-teal-900 font-semibold ring-2 ring-teal-500/20'
+                      : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="font-bold">Property Owner</span>
+                  <span className="text-[10px] text-slate-400 font-normal">List & manage</span>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Full Name *
               </label>
               <div className="relative">
                 <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -66,7 +134,7 @@ const Register = () => {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Email Address
+                Email Address *
               </label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -83,51 +151,62 @@ const Register = () => {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Password
+                Phone Number (Optional)
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
-                  type="password"
-                  required
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Minimum 6 characters"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="+91 98765 43210"
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-teal-500 focus:bg-white transition"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                I am a:
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, role: 'tenant' })}
-                  className={`p-3 rounded-xl border text-xs font-medium text-left transition flex flex-col gap-1 ${
-                    formData.role === 'tenant'
-                      ? 'border-teal-600 bg-teal-50/70 text-teal-900 font-semibold'
-                      : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  <span>Tenant / Buyer</span>
-                  <span className="text-[10px] text-slate-400 font-normal">Search & rent</span>
-                </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Password *
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Min. 6 chars"
+                    className="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-teal-500 focus:bg-white transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                  >
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
 
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, role: 'owner' })}
-                  className={`p-3 rounded-xl border text-xs font-medium text-left transition flex flex-col gap-1 ${
-                    formData.role === 'owner'
-                      ? 'border-teal-600 bg-teal-50/70 text-teal-900 font-semibold'
-                      : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  <span>Property Owner</span>
-                  <span className="text-[10px] text-slate-400 font-normal">List & manage</span>
-                </button>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Confirm Password *
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={formData.confirmPassword}
+                    onChange={(e) =>
+                      setFormData({ ...formData, confirmPassword: e.target.value })
+                    }
+                    placeholder="Repeat password"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-teal-500 focus:bg-white transition"
+                  />
+                </div>
               </div>
             </div>
 
@@ -135,6 +214,7 @@ const Register = () => {
               type="submit"
               variant="primary"
               size="lg"
+              loading={loading}
               className="w-full mt-2"
               icon={<UserCheck className="w-4 h-4" />}
             >

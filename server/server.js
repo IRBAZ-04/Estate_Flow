@@ -8,12 +8,15 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const connectDB = require('./config/db');
+const seedAdminUser = require('./utils/seedAdmin');
 const apiRoutes = require('./routes/api');
 const errorHandler = require('./middleware/errorHandler');
 const notFound = require('./middleware/notFound');
 
-// Initialize database connection
-connectDB();
+// Initialize database connection & admin seeder
+connectDB().then(() => {
+  seedAdminUser();
+});
 
 const app = express();
 

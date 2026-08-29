@@ -2,18 +2,25 @@ const express = require('express');
 const router = express.Router();
 
 const healthRoutes = require('./healthRoutes');
+const authRoutes = require('./authRoutes');
 
-// Health Check Route
+// Mount routes
 router.use('/health', healthRoutes);
+router.use('/auth', authRoutes);
 
-// Placeholder index for /api
+// Master API index
 router.get('/', (req, res) => {
   res.json({
     success: true,
     message: 'Welcome to the Real Estate Property Management System API',
     endpoints: {
       health: '/api/health',
-      auth: '/api/auth (Available in Phase 2)',
+      auth: {
+        register: 'POST /api/auth/register',
+        login: 'POST /api/auth/login',
+        me: 'GET /api/auth/me (Protected)',
+        profile: 'PUT /api/auth/profile (Protected)',
+      },
       properties: '/api/properties (Available in Phase 3)',
       search: '/api/properties/search (Available in Phase 4)',
       inquiries: '/api/inquiries (Available in Phase 5)',

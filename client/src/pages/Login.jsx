@@ -1,19 +1,58 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Mail, Lock, LogIn, ShieldAlert, Sparkles, Building2 } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Mail, Lock, LogIn, Sparkles, Building2, AlertCircle, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
 
 const Login = () => {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
-  const [infoNotice, setInfoNotice] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleSubmit = (e) => {
+  // Quick Demo Logins
+  const demoAccounts = [
+    { label: 'Admin', email: 'admin@estateflow.com', password: 'Admin@123456', role: 'admin' },
+    { label: 'Owner (Demo)', email: 'owner@estateflow.com', password: 'Owner@123456', role: 'owner' },
+    { label: 'Tenant (Demo)', email: 'tenant@estateflow.com', password: 'Tenant@123456', role: 'tenant' },
+  ];
+
+  const fillDemo = (demo) => {
+    setFormData({ email: demo.email, password: demo.password });
+    setError(null);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setInfoNotice(true);
+    setError(null);
+    setLoading(true);
+
+    const res = await login(formData.email, formData.password);
+    setLoading(false);
+
+    if (res.success) {
+      // Determine redirection path based on role or intended destination
+      const from = location.state?.from?.pathname;
+      if (from && from !== '/login') {
+        navigate(from, { replace: true });
+      } else if (res.user.role === 'admin') {
+        navigate('/admin/dashboard', { replace: true });
+      } else if (res.user.role === 'owner') {
+        navigate('/owner/dashboard', { replace: true });
+      } else {
+        navigate('/tenant/dashboard', { replace: true });
+      }
+    } else {
+      setError(res.message);
+    }
   };
 
   return (
@@ -24,23 +63,41 @@ const Login = () => {
             <Building2 className="w-6 h-6" />
           </div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            Welcome Back
+            Sign In to EstateFlow
           </h1>
           <p className="text-xs text-slate-500">
-            Sign in to access your properties, agreements, and dashboard
+            Access your property dashboard, agreements, and real-time alerts
           </p>
         </div>
 
         <Card padding="p-6 sm:p-8" className="shadow-lg">
-          {infoNotice && (
-            <div className="mb-6 p-4 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-xs flex items-start gap-2.5">
-              <Sparkles className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold">Phase 1 Foundation Ready</p>
-                <p className="text-teal-700 mt-0.5">
-                  Backend JWT authentication, password hashing, and role verification will be activated in Phase 2.
-                </p>
-              </div>
+          {/* Quick Demo Credentials Bar */}
+          <div className="mb-6 p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600">
+              <span className="flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-teal-600" />
+                Quick Demo Accounts:
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {demoAccounts.map((d) => (
+                <button
+                  key={d.label}
+                  type="button"
+                  onClick={() => fillDemo(d)}
+                  className="px-2 py-1 bg-white hover:bg-teal-50 border border-slate-200 hover:border-teal-300 text-slate-700 text-[11px] font-medium rounded-lg transition text-center truncate"
+                  title={`Fill ${d.label} credentials`}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {error && (
+            <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-center gap-2.5 animate-shake">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
@@ -67,20 +124,24 @@ const Login = () => {
                 <label className="block text-xs font-semibold text-slate-700">
                   Password
                 </label>
-                <span className="text-[11px] text-slate-400 hover:text-teal-600 cursor-pointer">
-                  Forgot Password?
-                </span>
               </div>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-teal-500 focus:bg-white transition"
+                  className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-teal-500 focus:bg-white transition"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
@@ -88,6 +149,7 @@ const Login = () => {
               type="submit"
               variant="primary"
               size="lg"
+              loading={loading}
               className="w-full mt-2"
               icon={<LogIn className="w-4 h-4" />}
             >
@@ -99,7 +161,7 @@ const Login = () => {
             <p className="text-xs text-slate-500">
               Don't have an account?{' '}
               <Link to="/register" className="font-semibold text-teal-600 hover:text-teal-700">
-                Register here
+                Create an account
               </Link>
             </p>
           </div>
