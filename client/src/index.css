@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 selection:bg-teal-500 selection:text-white;
+  }
+}
+
+/* Custom modern utilities */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.dark .glass-panel {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+}
+
+.gradient-text {
+  @apply bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 bg-clip-text text-transparent;
+}
+
+.hero-glow {
+  background: radial-gradient(circle at 50% 50%, rgba(20, 184, 166, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
+}
