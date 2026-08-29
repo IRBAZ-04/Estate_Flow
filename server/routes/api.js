@@ -7,6 +7,8 @@ const propertyRoutes = require('./propertyRoutes');
 const favoriteRoutes = require('./favoriteRoutes');
 const inquiryRoutes = require('./inquiryRoutes');
 const visitRoutes = require('./visitRoutes');
+const agreementRoutes = require('./agreementRoutes');
+const paymentRoutes = require('./paymentRoutes');
 
 // Mount routes
 router.use('/health', healthRoutes);
@@ -15,6 +17,8 @@ router.use('/properties', propertyRoutes);
 router.use('/favorites', favoriteRoutes);
 router.use('/inquiries', inquiryRoutes);
 router.use('/visits', visitRoutes);
+router.use('/agreements', agreementRoutes);
+router.use('/payments', paymentRoutes);
 
 // Master API index
 router.get('/', (req, res) => {
@@ -59,8 +63,19 @@ router.get('/', (req, res) => {
         cancel: 'PATCH /api/visits/:id/cancel (Protected: Requester)',
         delete: 'DELETE /api/visits/:id (Protected)',
       },
-      agreements: '/api/agreements (Available in Phase 6)',
-      payments: '/api/payments (Available in Phase 6)',
+      agreements: {
+        list: 'GET /api/agreements (Protected)',
+        create: 'POST /api/agreements (Protected: Owner/Admin)',
+        details: 'GET /api/agreements/:id (Protected)',
+        update: 'PUT /api/agreements/:id (Protected: Owner/Admin)',
+        delete: 'DELETE /api/agreements/:id (Protected: Owner/Admin)',
+      },
+      payments: {
+        list: 'GET /api/payments (Protected)',
+        create: 'POST /api/payments (Protected)',
+        details: 'GET /api/payments/:id (Protected)',
+        update: 'PUT /api/payments/:id (Protected: Owner/Admin)',
+      },
       maintenance: '/api/maintenance (Available in Phase 7)',
       notifications: '/api/notifications (Available in Phase 7)',
       admin: '/api/admin (Available in Phase 8)',

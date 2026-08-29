@@ -15,21 +15,26 @@ import Register from './pages/Register';
 import Unauthorized from './pages/Unauthorized';
 import NotFound from './pages/NotFound';
 
-// Protected User Profile & Favorites
+// Protected User Profile, Favorites, Agreements & Payments
 import Profile from './pages/Profile';
 import Favorites from './pages/Favorites';
+import AgreementsList from './pages/agreements/AgreementsList';
+import AgreementDetails from './pages/agreements/AgreementDetails';
+import PaymentHistory from './pages/payments/PaymentHistory';
 
 // Dashboards
 import AdminDashboard from './pages/admin/AdminDashboard';
 import OwnerDashboard from './pages/owner/OwnerDashboard';
 import TenantDashboard from './pages/tenant/TenantDashboard';
 
-// Owner Property, Inquiry & Visit Management Pages
+// Owner Property, Agreement & Financial Pages
 import MyProperties from './pages/owner/MyProperties';
 import AddProperty from './pages/owner/AddProperty';
 import EditProperty from './pages/owner/EditProperty';
 import OwnerInquiries from './pages/owner/OwnerInquiries';
 import OwnerVisits from './pages/owner/OwnerVisits';
+import CreateAgreement from './pages/owner/CreateAgreement';
+import OwnerFinances from './pages/owner/OwnerFinances';
 
 // Tenant Inquiry & Visit Pages
 import MyInquiries from './pages/tenant/MyInquiries';
@@ -51,7 +56,7 @@ function App() {
             <Route path="register" element={<Register />} />
             <Route path="unauthorized" element={<Unauthorized />} />
 
-            {/* Authenticated Profile & Favorites */}
+            {/* Authenticated Profile, Favorites, Agreements & Payments */}
             <Route
               path="profile"
               element={
@@ -65,6 +70,30 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Favorites />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="agreements"
+              element={
+                <ProtectedRoute>
+                  <AgreementsList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="agreements/:id"
+              element={
+                <ProtectedRoute>
+                  <AgreementDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="payments"
+              element={
+                <ProtectedRoute>
+                  <PaymentHistory />
                 </ProtectedRoute>
               }
             />
@@ -97,7 +126,7 @@ function App() {
               }
             />
 
-            {/* Owner Portal, Properties, Inquiries & Visits */}
+            {/* Owner Portal, Properties, Agreements & Financials */}
             <Route
               path="owner/dashboard"
               element={
@@ -143,6 +172,22 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['owner', 'admin']}>
                   <OwnerVisits />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="owner/agreements/create"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'admin']}>
+                  <CreateAgreement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="owner/finances"
+              element={
+                <ProtectedRoute allowedRoles={['owner', 'admin']}>
+                  <OwnerFinances />
                 </ProtectedRoute>
               }
             />
