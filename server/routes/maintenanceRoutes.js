@@ -7,7 +7,12 @@ const {
   updateMaintenance,
 } = require('../controllers/maintenanceController');
 const { protect } = require('../middleware/auth');
+const validateObjectId = require('../middleware/validateObjectId');
 
+// Validate :id param
+router.param('id', validateObjectId('id'));
+
+// All maintenance routes require authentication
 router.use(protect);
 
 router.post('/', createMaintenance);

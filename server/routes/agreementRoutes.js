@@ -8,7 +8,12 @@ const {
   deleteAgreement,
 } = require('../controllers/agreementController');
 const { protect, authorize } = require('../middleware/auth');
+const validateObjectId = require('../middleware/validateObjectId');
 
+// Validate :id param
+router.param('id', validateObjectId('id'));
+
+// All agreement routes require authentication
 router.use(protect);
 
 router.post('/', authorize('owner', 'admin'), createAgreement);

@@ -8,8 +8,12 @@ const {
   deleteInquiry,
 } = require('../controllers/inquiryController');
 const { protect } = require('../middleware/auth');
+const validateObjectId = require('../middleware/validateObjectId');
 
-// All inquiry routes require authentication
+// Validate :id param
+router.param('id', validateObjectId('id'));
+
+// All inquiry routes require login
 router.use(protect);
 
 router.post('/', createInquiry);

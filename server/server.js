@@ -12,6 +12,7 @@ const seedAdminUser = require('./utils/seedAdmin');
 const apiRoutes = require('./routes/api');
 const errorHandler = require('./middleware/errorHandler');
 const notFound = require('./middleware/notFound');
+const { helmetMiddleware, authLimiter, apiLimiter } = require('./middleware/security');
 
 // Initialize database connection & admin seeder
 connectDB().then(() => {
@@ -20,12 +21,15 @@ connectDB().then(() => {
 
 const app = express();
 
-// Request logging in development
+// 1. Security Headers (Helmet)
+app.use(helmetMiddleware);
+
+// 2. Request logging in development
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// CORS Configuration
+// 3. CORS Configuration
 const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
@@ -46,17 +50,22 @@ app.use(
   })
 );
 
-// Body parser
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// 4. Body parser with strict size limits to prevent Denial of Service
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve static uploaded files
+// 5. Rate Limiting Middleware
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api', apiLimiter);
+
+// 6. Serve static uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Mount API Routes
+// 7. Mount API Routes
 app.use('/api', apiRoutes);
 
-// Root route
+// 8. Root route
 app.get('/', (req, res) => {
   res.json({
     name: 'Real Estate Property Management System API',
@@ -66,7 +75,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// 404 and Error handling middleware
+// 9. 404 and Error handling middleware
 app.use(notFound);
 app.use(errorHandler);
 

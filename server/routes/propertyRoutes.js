@@ -11,6 +11,10 @@ const {
 } = require('../controllers/propertyController');
 const { protect, authorize } = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const validateObjectId = require('../middleware/validateObjectId');
+
+// Validate :id param for all routes containing :id
+router.param('id', validateObjectId('id'));
 
 // Public listing
 router.get('/', getPublicProperties);
