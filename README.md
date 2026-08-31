@@ -28,7 +28,7 @@ Traditional real estate workflows rely on fragmented, disjointed channels (sprea
 * **Runtime Environment**: Node.js (v18+ / v24)
 * **Web Framework**: Express.js (v4.21+)
 * **Database & ODM**: MongoDB with Mongoose (v8.9+)
-* **Authentication**: JSON Web Tokens (JWT) with HTTP Authorization headers & `bcryptjs` (salt rounds: 10) password hashing
+* **Authentication**: JSON Web Tokens (JWT) with HTTP Authorization headers & `bcryptjs` password hashing
 * **File Storage**: Multer multipart file upload middleware with disk storage & MIME-type filtering
 * **Security & Reliability**: `helmet` (CSP, frameguard, nosniff), `express-rate-limit` (brute-force protection), centralized error handlers, and MongoDB ObjectId parameter validation middleware
 * **Logging**: Morgan HTTP request logger
@@ -118,17 +118,15 @@ erDiagram
 
 ---
 
-## 5. Master Demo Accounts & Credentials
+## 5. User Roles & Account Architecture
 
-To facilitate rapid demonstration and grading, run the automated seed script (`npm run seed` in `server/`) to populate the following verified demo accounts:
+The platform provides three distinct portal experiences. Users can register as **Tenant** or **Owner** via the registration page, while **Admin** accounts are seeded via secure server configuration:
 
-| Role | Name | Email Address | Password | Key Portal Capabilities |
-| :--- | :--- | :--- | :--- | :--- |
-| **ADMIN** | System Administrator | `admin@estateflow.com` | `Admin@123456` | Platform KPIs, Recharts Analytics, Property Approvals Queue, User Directory Block/Unblock, Platform Operations Log |
-| **OWNER** | Rajesh Sharma | `rajesh.sharma@estateflow.com` | `Password@123` | Property CRUD, Photo Uploads, Inquiry Replies, Visit Confirmations, Agreement Drafting, Payment Ledgers, Maintenance Triage |
-| **OWNER** | Ananya Deshmukh | `ananya.deshmukh@estateflow.com` | `Password@123` | Office / Commercial Property Listings, Inquiries, Financial Overview |
-| **TENANT** | Karthik Ramachandran | `karthik.ram@estateflow.com` | `Password@123` | Property Discovery, Saved Favorites, Sent Inquiries, Booked Visits, Active Leases, Payment Records, Maintenance Requests |
-| **TENANT** | Priya Nair | `priya.nair@estateflow.com` | `Password@123` | Commercial Office Inquiries, Villa Site Visits, Maintenance Tickets |
+| Role | Access Level | Key Portal Capabilities |
+| :--- | :--- | :--- |
+| **ADMIN** | Platform Superuser | Platform KPI aggregations, Recharts Analytics, Property Approvals & Moderation, User Directory Moderation (Block/Unblock), Platform Operations Log |
+| **OWNER** | Property Manager / Landlord | Property CRUD, Photo Uploads, Inquiry Replies, Visit Confirmations, Agreement Drafting, Payment Ledgers, Maintenance Triage |
+| **TENANT** | Buyer / Renter | Property Discovery, Saved Favorites, Sent Inquiries, Booked Visits, Active Leases, Payment Records, Maintenance Requests |
 
 ---
 
@@ -241,7 +239,7 @@ All protected endpoints require the HTTP header: `Authorization: Bearer <JWT_TOK
      PORT=5000
      NODE_ENV=development
      MONGODB_URI=mongodb://127.0.0.1:27017/realestate_db
-     JWT_SECRET=supersecretjwtkey_course_project_sem5_2026
+     JWT_SECRET=your_jwt_secret_key_here
      CLIENT_URL=http://localhost:5173
      ```
    * Create `client/.env`:
@@ -249,7 +247,7 @@ All protected endpoints require the HTTP header: `Authorization: Bearer <JWT_TOK
      VITE_API_URL=http://localhost:5000/api
      ```
 
-4. **Seed Demo Data**:
+4. **Seed Initial Data (Optional)**:
    ```bash
    cd server
    npm run seed
@@ -274,46 +272,44 @@ All protected endpoints require the HTTP header: `Authorization: Bearer <JWT_TOK
 
 ---
 
-## 8. Step-by-Step 10–15 Minute Demonstration Sequence
+## 8. Step-by-Step Demonstration Sequence
 
 For course viva, seminar presentations, and project grading, follow this recommended walkthrough sequence:
 
-1. **Platform Landing & Discovery (2 mins)**:
-   * Open `http://localhost:5173/`. Point out the glassmorphism hero banner, live API backend status badge, and featured listings.
-   * Click **Explore Properties** (`/properties`). Demonstrate live multi-field filtering by location (`ECR`), purpose (`Rent`), property type (`Apartment`), and price slider.
-   * Open a Property Details page (`/properties/:id`). Demonstrate the image gallery, key property specs, and embedded contact card.
+1. **Platform Landing & Discovery**:
+   * Open `http://localhost:5173/`. Demonstrate the responsive navigation, live API backend status badge, and featured property cards.
+   * Navigate to **Explore Properties** (`/properties`). Demonstrate live multi-field filtering by location, purpose, property type, and price range.
+   * Open a Property Details page (`/properties/:id`). Showcase the image gallery, specifications, and owner profile card.
 
-2. **Tenant Authentication & Interaction (3 mins)**:
-   * Log in as Tenant: `karthik.ram@estateflow.com` / `Password@123`.
-   * Click the **Heart Icon** on a listing to demonstrate real-time saving to **Favorites** (`/favorites`).
-   * On the property details page, click **Send Inquiry** and submit a question.
-   * Click **Schedule Visit** and book an inspection for tomorrow at `11:00 AM`.
+2. **Tenant Authentication & Interaction**:
+   * Log in with a Tenant account.
+   * Click the **Heart Icon** to save properties to **Favorites** (`/favorites`).
+   * Submit an inquiry to an owner and book a site visit appointment.
 
-3. **Owner Portal & Management (4 mins)**:
-   * Log out and log in as Property Owner: `rajesh.sharma@estateflow.com` / `Password@123`.
-   * Point out the **Owner Dashboard** (`/owner/dashboard`) with active property counts, rent income, and pending inquiries.
-   * Check the **Notification Bell** in the top navbar showing the new inquiry and visit notifications.
-   * Open **Inquiries** (`/owner/inquiries`) and submit a reply to the tenant.
-   * Open **Site Visits** (`/owner/visits`) and click **Confirm Visit**.
-   * Open **Add Property** (`/owner/properties/add`), fill in property specifications with photos, and submit. Show that the newly added listing enters **Pending** status awaiting admin approval.
+3. **Owner Portal & Operations**:
+   * Log in with an Owner account.
+   * Inspect the **Owner Dashboard** with active listings count and inquiry alerts.
+   * Check the **Notification Bell** in the navbar showing real-time unread alerts.
+   * Open **Inquiries** (`/owner/inquiries`) to reply to prospective tenants.
+   * Open **Site Visits** (`/owner/visits`) and confirm scheduled appointments.
+   * Add a new property via **Add Property** (`/owner/properties/add`) and note that it enters **Pending** moderation status.
 
-4. **Administrator Portal & Analytics (4 mins)**:
-   * Log out and log in as Admin: `admin@estateflow.com` / `Admin@123456`.
+4. **Administrator Control & Analytics**:
+   * Log in with an Administrator account.
    * Open **Admin Dashboard** (`/admin/dashboard`). Showcase the real-time **Recharts SVG visual charts**:
      * Property Distribution by Type (Donut PieChart)
      * Listings by Purpose (Rent vs Sale PieChart)
      * User Demographics by Role (BarChart)
      * Maintenance Tickets by Category (BarChart)
-   * Open **Property Approvals** (`/admin/approvals`). Inspect the newly submitted owner listing and click **Approve & Publish**.
-   * Open **User Directory** (`/admin/users`). Demonstrate live search by email, role filtering, and the safety guard that prevents blocking self or the sole admin.
-   * Open **Operations Log** (`/admin/operations`). Switch between tabs (Inquiries, Visits, Agreements, Payments, Maintenance) to review centralized platform logs.
+   * Open **Property Approvals** (`/admin/approvals`) to review pending submissions and approve them.
+   * Open **User Directory** (`/admin/users`) to demonstrate user search, role filtering, and account moderation.
+   * Open **Operations Log** (`/admin/operations`) to inspect centralized logs across all modules.
 
-5. **Rental Agreements, Payments & Maintenance (2 mins)**:
-   * Log in as Tenant (`karthik.ram@estateflow.com`).
-   * Check **Agreements** (`/agreements`) to inspect the active lease terms.
-   * Check **Payments** (`/payments`) to review recorded rent and security deposit receipts.
-   * Open **My Maintenance** (`/tenant/maintenance`), click **Report New Issue**, select property, choose `Electrical` with `High` priority, and submit.
-   * Log in as Owner (`rajesh.sharma@estateflow.com`), navigate to **Maintenance Requests** (`/owner/maintenance`), update the ticket to `Resolved`, and add technician resolution comments.
+5. **Rental Agreements, Payments & Maintenance**:
+   * As a Tenant, view **Agreements** (`/agreements`) to review lease terms.
+   * Check **Payments** (`/payments`) to record and review simulated rent receipts.
+   * Report an issue under **My Maintenance** (`/tenant/maintenance`).
+   * As an Owner, navigate to **Maintenance Requests** (`/owner/maintenance`), add technician notes, and resolve the ticket.
 
 ---
 
