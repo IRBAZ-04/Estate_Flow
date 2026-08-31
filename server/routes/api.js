@@ -11,6 +11,7 @@ const agreementRoutes = require('./agreementRoutes');
 const paymentRoutes = require('./paymentRoutes');
 const maintenanceRoutes = require('./maintenanceRoutes');
 const notificationRoutes = require('./notificationRoutes');
+const adminRoutes = require('./adminRoutes');
 
 // Mount routes
 router.use('/health', healthRoutes);
@@ -23,6 +24,7 @@ router.use('/agreements', agreementRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/maintenance', maintenanceRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/admin', adminRoutes);
 
 // Master API index
 router.get('/', (req, res) => {
@@ -92,7 +94,14 @@ router.get('/', (req, res) => {
         read: 'PUT /api/notifications/:id/read (Protected)',
         delete: 'DELETE /api/notifications/:id (Protected)',
       },
-      admin: '/api/admin (Available in Phase 8)',
+      admin: {
+        stats: 'GET /api/admin/stats (Protected: Admin)',
+        users: 'GET /api/admin/users (Protected: Admin)',
+        userStatus: 'PUT /api/admin/users/:id/status (Protected: Admin)',
+        pendingProperties: 'GET /api/admin/properties/pending (Protected: Admin)',
+        approval: 'PUT /api/admin/properties/:id/approval (Protected: Admin)',
+        operations: 'GET /api/admin/operations (Protected: Admin)',
+      },
     },
   });
 });

@@ -22,6 +22,10 @@ import {
   Wrench,
   Bell,
   CheckCheck,
+  ShieldCheck,
+  Users,
+  FileCheck,
+  Activity,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BackendStatusBadge from './BackendStatusBadge';
@@ -51,7 +55,6 @@ const Navbar = () => {
 
   useEffect(() => {
     fetchNotifs();
-    // Poll every 30 seconds if authenticated
     const interval = setInterval(fetchNotifs, 30000);
     return () => clearInterval(interval);
   }, [isAuthenticated]);
@@ -146,7 +149,50 @@ const Navbar = () => {
               </NavLink>
             )}
 
-            {isAuthenticated && (
+            {isAuthenticated && user?.role === 'admin' && (
+              <>
+                <NavLink
+                  to="/admin/approvals"
+                  className={({ isActive }) =>
+                    `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'text-teal-600 bg-teal-50/80 font-semibold'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                    }`
+                  }
+                >
+                  Approvals
+                </NavLink>
+
+                <NavLink
+                  to="/admin/users"
+                  className={({ isActive }) =>
+                    `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'text-teal-600 bg-teal-50/80 font-semibold'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                    }`
+                  }
+                >
+                  Users
+                </NavLink>
+
+                <NavLink
+                  to="/admin/operations"
+                  className={({ isActive }) =>
+                    `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'text-teal-600 bg-teal-50/80 font-semibold'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                    }`
+                  }
+                >
+                  Operations
+                </NavLink>
+              </>
+            )}
+
+            {isAuthenticated && user?.role !== 'admin' && (
               <>
                 <NavLink
                   to="/agreements"
@@ -217,7 +263,7 @@ const Navbar = () => {
                     setNotifDropdownOpen(!notifDropdownOpen);
                     setUserDropdownOpen(false);
                   }}
-                  className="relative p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-teal-600 transition shadow-2xs"
+                  className="relative p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-teal-600 transition shadow-2xs cursor-pointer"
                   aria-label="View notifications"
                 >
                   <Bell className="w-4 h-4" />
@@ -239,7 +285,7 @@ const Navbar = () => {
                       {unreadCount > 0 && (
                         <button
                           onClick={handleMarkAllNotifsRead}
-                          className="text-[11px] text-teal-600 hover:underline font-semibold"
+                          className="text-[11px] text-teal-600 hover:underline font-semibold cursor-pointer"
                         >
                           Mark all read
                         </button>
@@ -347,6 +393,35 @@ const Navbar = () => {
                       <span>{user?.role?.toUpperCase()} Dashboard</span>
                     </Link>
 
+                    {user?.role === 'admin' && (
+                      <>
+                        <Link
+                          to="/admin/approvals"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-teal-600 transition"
+                        >
+                          <FileCheck className="w-3.5 h-3.5 text-teal-600" />
+                          <span>Property Approvals</span>
+                        </Link>
+                        <Link
+                          to="/admin/users"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-teal-600 transition"
+                        >
+                          <Users className="w-3.5 h-3.5 text-teal-600" />
+                          <span>User Directory</span>
+                        </Link>
+                        <Link
+                          to="/admin/operations"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-teal-600 transition"
+                        >
+                          <Activity className="w-3.5 h-3.5 text-teal-600" />
+                          <span>Platform Operations</span>
+                        </Link>
+                      </>
+                    )}
+
                     <Link
                       to="/notifications"
                       onClick={() => setUserDropdownOpen(false)}
@@ -409,24 +484,8 @@ const Navbar = () => {
                           <Building className="w-3.5 h-3.5 text-cyan-600" />
                           <span>My Properties</span>
                         </Link>
-                        <Link
-                          to="/owner/inquiries"
-                          onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-teal-600 transition"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5 text-teal-600" />
-                          <span>Received Inquiries</span>
-                        </Link>
-                        <Link
-                          to="/owner/visits"
-                          onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-teal-600 transition"
-                        >
-                          <Calendar className="w-3.5 h-3.5 text-amber-600" />
-                          <span>Visit Requests</span>
-                        </Link>
                       </>
-                    ) : (
+                    ) : user?.role === 'tenant' ? (
                       <>
                         <Link
                           to="/tenant/maintenance"
@@ -444,16 +503,8 @@ const Navbar = () => {
                           <MessageSquare className="w-3.5 h-3.5 text-teal-600" />
                           <span>My Sent Inquiries</span>
                         </Link>
-                        <Link
-                          to="/tenant/visits"
-                          onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-teal-600 transition"
-                        >
-                          <Calendar className="w-3.5 h-3.5 text-amber-600" />
-                          <span>My Scheduled Visits</span>
-                        </Link>
                       </>
-                    )}
+                    ) : null}
 
                     <Link
                       to="/profile"
@@ -467,7 +518,7 @@ const Navbar = () => {
                     <div className="border-t border-slate-100 mt-1 pt-1">
                       <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-rose-600 hover:bg-rose-50 transition text-left"
+                        className="w-full flex items-center gap-2 px-3 py-2 text-rose-600 hover:bg-rose-50 transition text-left cursor-pointer"
                       >
                         <LogOut className="w-3.5 h-3.5" />
                         <span>Sign Out</span>
@@ -550,6 +601,35 @@ const Navbar = () => {
                 <span>My Dashboard</span>
               </Link>
 
+              {user?.role === 'admin' && (
+                <>
+                  <Link
+                    to="/admin/approvals"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
+                  >
+                    <FileCheck className="w-4 h-4 text-teal-600" />
+                    <span>Property Approvals</span>
+                  </Link>
+                  <Link
+                    to="/admin/users"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
+                  >
+                    <Users className="w-4 h-4 text-teal-600" />
+                    <span>User Directory</span>
+                  </Link>
+                  <Link
+                    to="/admin/operations"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
+                  >
+                    <Activity className="w-4 h-4 text-teal-600" />
+                    <span>Operations Log</span>
+                  </Link>
+                </>
+              )}
+
               <Link
                 to="/notifications"
                 onClick={() => setMobileMenuOpen(false)}
@@ -557,42 +637,6 @@ const Navbar = () => {
               >
                 <Bell className="w-4 h-4 text-teal-600" />
                 <span>Notifications ({unreadCount})</span>
-              </Link>
-
-              <Link
-                to="/agreements"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
-              >
-                <FileText className="w-4 h-4 text-teal-600" />
-                <span>Rental Agreements</span>
-              </Link>
-
-              <Link
-                to="/payments"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
-              >
-                <CreditCard className="w-4 h-4 text-emerald-600" />
-                <span>Payment History</span>
-              </Link>
-
-              <Link
-                to={user?.role === 'owner' ? '/owner/maintenance' : '/tenant/maintenance'}
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
-              >
-                <Wrench className="w-4 h-4 text-rose-600" />
-                <span>Maintenance Requests</span>
-              </Link>
-
-              <Link
-                to="/favorites"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-slate-800 hover:bg-slate-100 font-medium"
-              >
-                <Heart className="w-4 h-4 text-rose-500" />
-                <span>Saved Favorites</span>
               </Link>
 
               <Link

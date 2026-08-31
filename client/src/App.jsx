@@ -29,12 +29,14 @@ import MaintenanceDetails from './pages/maintenance/MaintenanceDetails';
 import MyMaintenance from './pages/tenant/MyMaintenance';
 import OwnerMaintenance from './pages/owner/OwnerMaintenance';
 
-// Dashboards
+// Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
-import OwnerDashboard from './pages/owner/OwnerDashboard';
-import TenantDashboard from './pages/tenant/TenantDashboard';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminApprovals from './pages/admin/AdminApprovals';
+import AdminOperations from './pages/admin/AdminOperations';
 
-// Owner Property, Agreement & Financial Pages
+// Owner Pages
+import OwnerDashboard from './pages/owner/OwnerDashboard';
 import MyProperties from './pages/owner/MyProperties';
 import AddProperty from './pages/owner/AddProperty';
 import EditProperty from './pages/owner/EditProperty';
@@ -43,7 +45,8 @@ import OwnerVisits from './pages/owner/OwnerVisits';
 import CreateAgreement from './pages/owner/CreateAgreement';
 import OwnerFinances from './pages/owner/OwnerFinances';
 
-// Tenant Inquiry & Visit Pages
+// Tenant Pages
+import TenantDashboard from './pages/tenant/TenantDashboard';
 import MyInquiries from './pages/tenant/MyInquiries';
 import MyVisits from './pages/tenant/MyVisits';
 
@@ -165,12 +168,36 @@ function App() {
               }
             />
 
-            {/* Admin Dashboard */}
+            {/* Admin Management & Analytics */}
             <Route
               path="admin/dashboard"
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/users"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminUsers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/approvals"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminApprovals />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/operations"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminOperations />
                 </ProtectedRoute>
               }
             />
