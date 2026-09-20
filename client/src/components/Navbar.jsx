@@ -28,7 +28,6 @@ import {
   Activity,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import BackendStatusBadge from './BackendStatusBadge';
 import notificationService from '../services/notificationService';
 
 const Navbar = () => {
@@ -72,7 +71,6 @@ const Navbar = () => {
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Properties', path: '/properties' },
-    { name: 'About Project', path: '/about' },
     { name: 'Contact', path: '/contact' },
   ];
 
@@ -253,8 +251,6 @@ const Navbar = () => {
 
           {/* Right Action Area */}
           <div className="hidden md:flex items-center gap-3">
-            <BackendStatusBadge />
-
             {/* Notification Bell */}
             {isAuthenticated && (
               <div className="relative">
@@ -550,7 +546,6 @@ const Navbar = () => {
 
           {/* Mobile Menu Button */}
           <div className="flex items-center gap-2 md:hidden">
-            <BackendStatusBadge />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"

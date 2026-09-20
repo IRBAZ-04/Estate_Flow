@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import {
   Building,
@@ -7,37 +7,15 @@ import {
   Search,
   CheckCircle,
   ArrowRight,
-  TrendingUp,
   FileText,
   CreditCard,
   Wrench,
   Bell,
-  Cpu,
-  Layers,
   Sparkles,
   MapPin,
   Home as HomeIcon,
 } from 'lucide-react';
-import api from '../services/api';
-
 const Home = () => {
-  const [healthData, setHealthData] = useState(null);
-  const [healthLoading, setHealthLoading] = useState(true);
-
-  useEffect(() => {
-    api
-      .get('/health')
-      .then((res) => {
-        setHealthData(res.data?.data || null);
-      })
-      .catch(() => {
-        setHealthData(null);
-      })
-      .finally(() => {
-        setHealthLoading(false);
-      });
-  }, []);
-
   const features = [
     {
       icon: <Building className="w-6 h-6 text-teal-600" />,
@@ -88,7 +66,7 @@ const Home = () => {
           <div className="text-center max-w-3xl mx-auto space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-100/80 border border-teal-200 text-teal-800 text-xs font-semibold tracking-wide">
               <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-              <span>Phase 1 Architecture Scaffolding Active</span>
+              <span>Find a place that feels like home</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-tight">
@@ -97,7 +75,7 @@ const Home = () => {
             </h1>
 
             <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto">
-              A full-lifecycle MERN platform engineered for university Full-Stack excellence. Connecting Owners, Tenants, and Administrators with role-based workflows.
+              Discover thoughtfully managed homes and spaces, connect with trusted owners, and manage every step of your rental journey in one place.
             </p>
 
             {/* Quick Interactive Search Bar Preview */}
@@ -174,59 +152,11 @@ const Home = () => {
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
               <Link
-                to="/about"
+                to="/contact"
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 shadow-xs transition"
               >
-                <span>System Architecture</span>
+                <span>Talk to our team</span>
               </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Live System Diagnostics / Architecture Banner */}
-      <section className="py-8 bg-slate-900 text-slate-200 border-y border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-center">
-            <div className="md:col-span-1 border-b md:border-b-0 md:border-r border-slate-800 pb-4 md:pb-0">
-              <div className="flex items-center gap-2 text-teal-400 text-xs font-semibold uppercase tracking-wider">
-                <Cpu className="w-4 h-4" />
-                <span>Backend Diagnostics</span>
-              </div>
-              <p className="text-xs text-slate-400 mt-1">
-                Real-time connection to Express & MongoDB
-              </p>
-            </div>
-
-            <div className="md:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-              <div className="p-3 bg-slate-800/70 rounded-xl border border-slate-700/60">
-                <span className="text-slate-400 block">Server Status:</span>
-                <span className="font-semibold text-emerald-400 flex items-center gap-1.5 mt-0.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  {healthLoading ? 'Checking...' : healthData?.status?.toUpperCase() || 'OFFLINE'}
-                </span>
-              </div>
-
-              <div className="p-3 bg-slate-800/70 rounded-xl border border-slate-700/60">
-                <span className="text-slate-400 block">MongoDB Database:</span>
-                <span className="font-semibold text-teal-300 mt-0.5 block">
-                  {healthLoading ? 'Checking...' : healthData?.database?.status || 'Disconnected'}
-                </span>
-              </div>
-
-              <div className="p-3 bg-slate-800/70 rounded-xl border border-slate-700/60">
-                <span className="text-slate-400 block">Current Phase:</span>
-                <span className="font-semibold text-cyan-300 mt-0.5 block">
-                  Phase 1 / 10
-                </span>
-              </div>
-
-              <div className="p-3 bg-slate-800/70 rounded-xl border border-slate-700/60">
-                <span className="text-slate-400 block">API Base URL:</span>
-                <span className="font-mono text-[10px] text-slate-300 mt-0.5 block truncate">
-                  http://localhost:5000/api
-                </span>
-              </div>
             </div>
           </div>
         </div>
@@ -243,7 +173,7 @@ const Home = () => {
               Comprehensive Real Estate Lifecycle
             </p>
             <p className="text-sm text-slate-600">
-              Engineered with clean separation of concerns, robust schemas, and role-driven dashboards.
+              Everything you need to discover, manage, and enjoy your next property.
             </p>
           </div>
 
@@ -273,10 +203,10 @@ const Home = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-12 space-y-2">
             <h2 className="text-xs font-bold text-teal-600 uppercase tracking-widest">
-              Connected Architecture
+              A simpler property journey
             </h2>
             <p className="text-2xl font-bold text-slate-900">
-              How the 10 Phases Connect
+              From search to settled
             </p>
           </div>
 

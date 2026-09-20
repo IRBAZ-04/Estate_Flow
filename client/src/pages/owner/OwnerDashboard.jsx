@@ -211,7 +211,7 @@ const OwnerDashboard = () => {
           )}
         </div>
 
-        {/* Phase Roadmap & Tips Sidebar */}
+        {/* Owner guidance */}
         <div className="space-y-4">
           <Card className="space-y-3 bg-gradient-to-br from-slate-900 to-slate-800 text-white border-none shadow-md">
             <div className="flex items-center gap-2 text-cyan-400">
@@ -221,25 +221,22 @@ const OwnerDashboard = () => {
             <p className="text-xs text-slate-300 leading-relaxed">
               You can post listings with multi-image uploads, manage details, and toggle unit availability when tenants move in.
             </p>
-            <div className="pt-2 border-t border-slate-700 flex justify-between items-center text-[11px] text-teal-300 font-mono">
-              <span>Phase 3: Property CRUD Live</span>
-            </div>
           </Card>
 
           <Card className="space-y-2.5">
-            <h4 className="font-bold text-xs text-slate-900">Upcoming Workflow</h4>
+            <h4 className="font-bold text-xs text-slate-900">Your workspace</h4>
             <div className="space-y-1.5 text-xs text-slate-600">
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
-                <span>Phase 4: Advanced Search & Filter</span>
+                <span>Keep listings accurate and up to date</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
-                <span>Phase 5: Inquiries & Visit Requests</span>
+                <span>Respond quickly to inquiries and visits</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                <span>Phase 6: Rental Agreements & Rent Tracking</span>
+                <span>Track agreements, rent, and maintenance</span>
               </div>
             </div>
           </Card>

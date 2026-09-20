@@ -57,8 +57,8 @@ const Contact = () => {
               <MapPin className="w-5 h-5" />
               <h3 className="font-bold text-sm text-slate-900">Campus Location</h3>
             </div>
-            <p className="text-xs text-slate-600">Department of Computer Science & Engineering</p>
-            <p className="text-xs text-slate-400 mt-1">Semester 5 Full Stack Lab</p>
+            <p className="text-xs text-slate-600">EstateFlow Support Centre</p>
+            <p className="text-xs text-slate-400 mt-1">Chennai, India</p>
           </div>
         </div>
 
@@ -69,7 +69,7 @@ const Contact = () => {
               <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
               <h4 className="font-bold text-sm text-emerald-900">Message Received!</h4>
               <p className="text-xs text-emerald-700">
-                Thank you for your message. In Phase 5, this will directly trigger a database inquiry document.
+                Thank you for reaching out. Our team will get back to you within 24 hours.
               </p>
             </div>
           ) : (

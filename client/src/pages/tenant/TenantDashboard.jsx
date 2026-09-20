@@ -75,7 +75,7 @@ const TenantDashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h3 className="font-bold text-sm text-slate-900">Tenant Account (Phase 2 Authenticated)</h3>
+            <h3 className="font-bold text-sm text-slate-900">Tenant Account</h3>
             <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
               Active
@@ -101,7 +101,7 @@ const TenantDashboard = () => {
           </div>
 
           <p className="text-xs text-slate-500 pt-2 border-t border-slate-100">
-            In Phase 5, you can submit inquiries and schedule in-person visits. In Phase 6, digital agreements and payment histories will be activated.
+            Manage inquiries, visits, agreements, payments, and maintenance requests from your account.
           </p>
         </Card>
 

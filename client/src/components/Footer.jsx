@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, Github, ShieldCheck, Layers, Database, Server, Layout } from 'lucide-react';
+import { Building2, ShieldCheck } from 'lucide-react';
 
 const Footer = () => {
   return (
@@ -18,11 +18,11 @@ const Footer = () => {
               </span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              A comprehensive university Full Stack Development course project built on the MERN stack. Covering end-to-end property lifecycles, role-based workflows, rental agreements, and payment tracking.
+              Discover better spaces, connect with trusted property owners, and manage your rental journey with confidence.
             </p>
             <div className="flex items-center gap-2 text-xs text-teal-400 font-medium">
-              <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
-              Phase 1: Project Setup & Architecture
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Trusted property experiences
             </div>
           </div>
 
@@ -34,17 +34,12 @@ const Footer = () => {
             <ul className="space-y-2 text-xs">
               <li>
                 <Link to="/" className="hover:text-teal-400 transition">
-                  Home Landing
+                  Home
                 </Link>
               </li>
               <li>
                 <Link to="/properties" className="hover:text-teal-400 transition">
                   Browse Properties
-                </Link>
-              </li>
-              <li>
-                <Link to="/about" className="hover:text-teal-400 transition">
-                  Architecture & Design
                 </Link>
               </li>
               <li>
@@ -82,38 +77,23 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Tech Stack */}
+          {/* Service promise */}
           <div>
             <h4 className="text-xs font-semibold text-slate-200 uppercase tracking-wider mb-4">
-              Technology Stack
+              Why EstateFlow
             </h4>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="flex items-center gap-1.5 p-1.5 rounded bg-slate-800/60 border border-slate-700/50">
-                <Database className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-slate-300">MongoDB</span>
-              </div>
-              <div className="flex items-center gap-1.5 p-1.5 rounded bg-slate-800/60 border border-slate-700/50">
-                <Server className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-slate-300">Express.js</span>
-              </div>
-              <div className="flex items-center gap-1.5 p-1.5 rounded bg-slate-800/60 border border-slate-700/50">
-                <Layout className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="text-slate-300">React + Vite</span>
-              </div>
-              <div className="flex items-center gap-1.5 p-1.5 rounded bg-slate-800/60 border border-slate-700/50">
-                <Layers className="w-3.5 h-3.5 text-teal-400" />
-                <span className="text-slate-300">Node.js</span>
-              </div>
-            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Curated listings, clear communication, and helpful tools for owners and residents.
+            </p>
           </div>
         </div>
 
         <div className="mt-8 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div>
-            © {new Date().getFullYear()} EstateFlow Real Estate Management System. Full-Stack MERN Project.
+            © {new Date().getFullYear()} EstateFlow. Better spaces, made simple.
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-slate-400 font-medium">10 Phase Incremental Development</span>
+            <span className="text-slate-400 font-medium">Built for modern living</span>
           </div>
         </div>
       </div>

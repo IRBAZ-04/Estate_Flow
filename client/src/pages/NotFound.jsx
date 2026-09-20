@@ -13,7 +13,7 @@ const NotFound = () => {
         <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">404</h1>
         <h2 className="text-lg font-bold text-slate-800">Page Not Found</h2>
         <p className="text-xs text-slate-500 leading-relaxed">
-          The requested page could not be located. It may have been moved or will be introduced in an upcoming phase.
+          The page you are looking for could not be found. Let us help you get back on track.
         </p>
 
         <div className="pt-2">

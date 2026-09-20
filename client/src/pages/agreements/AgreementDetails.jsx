@@ -461,7 +461,7 @@ const AgreementDetails = () => {
                 </div>
 
                 <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800">
-                  <strong>Notice:</strong> This is a simulation recording for course project demonstration. No real financial debit occurs.
+                  <strong>Notice:</strong> This records the payment details for your rental account. No financial debit is processed here.
                 </div>
 
                 <div className="pt-2 flex justify-end gap-2">
