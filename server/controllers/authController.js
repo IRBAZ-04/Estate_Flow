@@ -18,6 +18,43 @@ const register = async (req, res, next) => {
       });
     }
 
+    // Name validation
+    if (/\d/.test(name)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name cannot contain numbers',
+      });
+    }
+    if (name.trim().length < 2 || name.trim().length > 50) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name must be between 2 and 50 characters',
+      });
+    }
+
+    // Phone validation (if provided)
+    if (phone && phone.trim()) {
+      let cleanPhone = phone.replace(/[\s\-()]/g, '');
+      if (cleanPhone.startsWith('+91')) cleanPhone = cleanPhone.slice(3);
+      else if (cleanPhone.startsWith('91') && cleanPhone.length === 12) cleanPhone = cleanPhone.slice(2);
+      else if (cleanPhone.startsWith('0') && cleanPhone.length === 11) cleanPhone = cleanPhone.slice(1);
+
+      if (/[^\d]/.test(cleanPhone) || cleanPhone.length !== 10 || !/^[6-9]/.test(cleanPhone)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Phone number must be a valid 10-digit Indian mobile number',
+        });
+      }
+    }
+
+    // Password validation
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long',
+      });
+    }
+
     // Security check: Block public registration as Admin
     if (role && role.toLowerCase() === 'admin') {
       return res.status(400).json({

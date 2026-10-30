@@ -1,36 +1,74 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Phone, Lock, Shield, CheckCircle2, AlertCircle } from 'lucide-react';
+import { User, Mail, Phone, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import FieldError from '../components/common/FieldError';
+import useForm from '../hooks/useForm';
+import {
+  validateName,
+  validatePhone,
+  validatePassword,
+  validateConfirmPassword,
+  validateRequired,
+} from '../utils/validators';
 
 const Profile = () => {
   const { user, updateProfile, changePassword } = useAuth();
 
-  const [profileData, setProfileData] = useState({
-    name: user?.name || '',
-    phone: user?.phone || '',
-  });
   const [profileSuccess, setProfileSuccess] = useState(null);
   const [profileError, setProfileError] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
 
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
   const [passwordSuccess, setPasswordSuccess] = useState(null);
   const [passwordError, setPasswordError] = useState(null);
   const [passwordLoading, setPasswordLoading] = useState(false);
 
+  // Profile Form Validation
+  const profileValidators = {
+    name: (val) => validateName(val, 'Full Name'),
+    phone: (val) => (val && val.trim() ? validatePhone(val, 'Phone Number') : null),
+  };
+
+  const profileForm = useForm(
+    {
+      name: user?.name || '',
+      phone: user?.phone || '',
+    },
+    profileValidators
+  );
+
+  // Password Form Validation
+  const passwordValidators = {
+    currentPassword: (val) => validateRequired(val, 'Current Password'),
+    newPassword: (val) => validatePassword(val, 'New Password', 6),
+    confirmPassword: (val, all) => validateConfirmPassword(all.newPassword, val),
+  };
+
+  const passwordForm = useForm(
+    {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    },
+    passwordValidators
+  );
+
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
-    setProfileLoading(true);
     setProfileSuccess(null);
     setProfileError(null);
 
-    const res = await updateProfile(profileData);
+    const isValid = profileForm.validateAll();
+    if (!isValid) return;
+
+    setProfileLoading(true);
+
+    const res = await updateProfile({
+      name: profileForm.values.name.trim(),
+      phone: profileForm.values.phone.trim(),
+    });
+
     setProfileLoading(false);
     if (res.success) {
       setProfileSuccess('Profile updated successfully!');
@@ -42,35 +80,43 @@ const Profile = () => {
 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    setPasswordLoading(true);
     setPasswordSuccess(null);
     setPasswordError(null);
 
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setPasswordError('New passwords do not match');
-      setPasswordLoading(false);
-      return;
-    }
+    const isValid = passwordForm.validateAll();
+    if (!isValid) return;
 
-    if (passwordData.newPassword.length < 6) {
-      setPasswordError('New password must be at least 6 characters long');
-      setPasswordLoading(false);
-      return;
-    }
+    setPasswordLoading(true);
 
     const res = await changePassword({
-      currentPassword: passwordData.currentPassword,
-      newPassword: passwordData.newPassword,
+      currentPassword: passwordForm.values.currentPassword,
+      newPassword: passwordForm.values.newPassword,
     });
 
     setPasswordLoading(false);
     if (res.success) {
       setPasswordSuccess('Password changed successfully!');
-      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      passwordForm.resetForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setTimeout(() => setPasswordSuccess(null), 4000);
     } else {
       setPasswordError(res.message);
     }
+  };
+
+  const getProfileInputStyle = (fieldName) => {
+    const hasError = profileForm.touched[fieldName] && Boolean(profileForm.errors[fieldName]);
+    const isValid = profileForm.touched[fieldName] && !profileForm.errors[fieldName] && profileForm.values[fieldName];
+    if (hasError) return 'border-rose-400 bg-rose-50/30 text-rose-900 focus:border-rose-500';
+    if (isValid) return 'border-emerald-400 bg-emerald-50/20 text-slate-800 focus:border-emerald-500';
+    return 'border-slate-200 bg-slate-50 text-slate-800 focus:border-teal-500 focus:bg-white';
+  };
+
+  const getPasswordInputStyle = (fieldName) => {
+    const hasError = passwordForm.touched[fieldName] && Boolean(passwordForm.errors[fieldName]);
+    const isValid = passwordForm.touched[fieldName] && !passwordForm.errors[fieldName] && passwordForm.values[fieldName];
+    if (hasError) return 'border-rose-400 bg-rose-50/30 text-rose-900 focus:border-rose-500';
+    if (isValid) return 'border-emerald-400 bg-emerald-50/20 text-slate-800 focus:border-emerald-500';
+    return 'border-slate-200 bg-slate-50 text-slate-800 focus:border-teal-500 focus:bg-white';
   };
 
   const roleBadgeColors = {
@@ -125,17 +171,26 @@ const Profile = () => {
             </div>
           )}
 
-          <form onSubmit={handleProfileSubmit} className="space-y-4">
+          <form onSubmit={handleProfileSubmit} noValidate className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Full Name
+                Full Name <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
-                required
-                value={profileData.name}
-                onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:border-teal-500 focus:bg-white transition"
+                name="name"
+                value={profileForm.values.name}
+                onChange={(e) => profileForm.handleChange('name', e.target.value)}
+                onBlur={() => profileForm.handleBlur('name')}
+                className={`w-full px-3.5 py-2 border rounded-xl text-xs outline-none transition ${getProfileInputStyle(
+                  'name'
+                )}`}
+              />
+              <FieldError
+                error={profileForm.errors.name}
+                touched={profileForm.touched.name}
+                showSuccess
+                successMessage="Valid name format"
               />
             </div>
 
@@ -153,14 +208,30 @@ const Profile = () => {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Phone Number
+                Phone Number (10 digits)
               </label>
               <input
-                type="text"
-                value={profileData.phone}
-                onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                placeholder="e.g. +91 98765 43210"
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:border-teal-500 focus:bg-white transition"
+                type="tel"
+                name="phone"
+                maxLength={10}
+                value={profileForm.values.phone}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  profileForm.handleChange('phone', val);
+                }}
+                onBlur={() => profileForm.handleBlur('phone')}
+                placeholder="e.g. 9876543210"
+                className={`w-full px-3.5 py-2 border rounded-xl text-xs outline-none transition ${getProfileInputStyle(
+                  'phone'
+                )}`}
+              />
+              <FieldError
+                error={profileForm.errors.phone}
+                touched={profileForm.touched.phone}
+                showSuccess={Boolean(profileForm.values.phone)}
+                successMessage="Valid mobile number"
+                currentLength={profileForm.values.phone ? profileForm.values.phone.length : null}
+                maxLength={10}
               />
             </div>
 
@@ -197,52 +268,71 @@ const Profile = () => {
             </div>
           )}
 
-          <form onSubmit={handlePasswordSubmit} className="space-y-4">
+          <form onSubmit={handlePasswordSubmit} noValidate className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Current Password
+                Current Password <span className="text-rose-500">*</span>
               </label>
               <input
                 type="password"
-                required
-                value={passwordData.currentPassword}
-                onChange={(e) =>
-                  setPasswordData({ ...passwordData, currentPassword: e.target.value })
-                }
+                name="currentPassword"
+                value={passwordForm.values.currentPassword}
+                onChange={(e) => passwordForm.handleChange('currentPassword', e.target.value)}
+                onBlur={() => passwordForm.handleBlur('currentPassword')}
                 placeholder="••••••••"
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:border-teal-500 focus:bg-white transition"
+                className={`w-full px-3.5 py-2 border rounded-xl text-xs outline-none transition ${getPasswordInputStyle(
+                  'currentPassword'
+                )}`}
+              />
+              <FieldError
+                error={passwordForm.errors.currentPassword}
+                touched={passwordForm.touched.currentPassword}
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                New Password
+                New Password <span className="text-rose-500">*</span>
               </label>
               <input
                 type="password"
-                required
-                value={passwordData.newPassword}
-                onChange={(e) =>
-                  setPasswordData({ ...passwordData, newPassword: e.target.value })
-                }
+                name="newPassword"
+                value={passwordForm.values.newPassword}
+                onChange={(e) => passwordForm.handleChange('newPassword', e.target.value)}
+                onBlur={() => passwordForm.handleBlur('newPassword')}
                 placeholder="Minimum 6 characters"
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:border-teal-500 focus:bg-white transition"
+                className={`w-full px-3.5 py-2 border rounded-xl text-xs outline-none transition ${getPasswordInputStyle(
+                  'newPassword'
+                )}`}
+              />
+              <FieldError
+                error={passwordForm.errors.newPassword}
+                touched={passwordForm.touched.newPassword}
+                showSuccess
+                successMessage="Valid new password"
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Confirm New Password
+                Confirm New Password <span className="text-rose-500">*</span>
               </label>
               <input
                 type="password"
-                required
-                value={passwordData.confirmPassword}
-                onChange={(e) =>
-                  setPasswordData({ ...passwordData, confirmPassword: e.target.value })
-                }
+                name="confirmPassword"
+                value={passwordForm.values.confirmPassword}
+                onChange={(e) => passwordForm.handleChange('confirmPassword', e.target.value)}
+                onBlur={() => passwordForm.handleBlur('confirmPassword')}
                 placeholder="Repeat new password"
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:border-teal-500 focus:bg-white transition"
+                className={`w-full px-3.5 py-2 border rounded-xl text-xs outline-none transition ${getPasswordInputStyle(
+                  'confirmPassword'
+                )}`}
+              />
+              <FieldError
+                error={passwordForm.errors.confirmPassword}
+                touched={passwordForm.touched.confirmPassword}
+                showSuccess={Boolean(passwordForm.values.confirmPassword && !passwordForm.errors.confirmPassword)}
+                successMessage="Passwords match"
               />
             </div>
 

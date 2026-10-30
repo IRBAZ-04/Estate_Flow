@@ -27,6 +27,13 @@ const createPayment = async (req, res, next) => {
       });
     }
 
+    if (isNaN(Number(amount)) || Number(amount) <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment amount must be a valid positive amount greater than zero',
+      });
+    }
+
     const agreement = await Agreement.findById(agreementId).populate('property');
     if (!agreement) {
       return res.status(404).json({

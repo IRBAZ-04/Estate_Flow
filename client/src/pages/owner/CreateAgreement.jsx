@@ -17,97 +17,132 @@ import propertyService from '../../services/propertyService';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import Loader from '../../components/common/Loader';
+import FieldError from '../../components/common/FieldError';
+import useForm from '../../hooks/useForm';
+import {
+  validateEmail,
+  validateRupeeAmount,
+  validateDate,
+  validateDateRange,
+  validateRequired,
+} from '../../utils/validators';
 
 const CreateAgreement = () => {
   const navigate = useNavigate();
   const [properties, setProperties] = useState([]);
   const [loadingProps, setLoadingProps] = useState(true);
-
-  const [formData, setFormData] = useState({
-    propertyId: '',
-    tenantEmail: '',
-    monthlyRent: '',
-    securityDeposit: '',
-    startDate: '',
-    endDate: '',
-    status: 'Active',
-    terms:
-      '1. The tenant agrees to pay the designated monthly rent on or before the 1st of each calendar month.\n2. A refundable security deposit is held by the landlord and returned upon satisfactory end-of-tenancy inspection.\n3. The property shall be used exclusively for peaceful residential purposes.\n4. A minimum of 30 days prior written notice is mandatory for lease termination by either party.',
-  });
-
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [serverError, setServerError] = useState('');
+
+  const validators = {
+    propertyId: (val) => validateRequired(val, 'Leased Property'),
+    tenantEmail: (val) => validateEmail(val, 'Tenant Account Email'),
+    monthlyRent: (val) => validateRupeeAmount(val, 'Monthly Rent', { min: 100, max: 50000000 }),
+    securityDeposit: (val) =>
+      validateRupeeAmount(val, 'Security Deposit', { min: 0, max: 100000000 }),
+    startDate: (val) => validateDate(val, 'Lease Commencement Date', { allowPast: true }),
+    endDate: (val, all) => {
+      const dateErr = validateDate(val, 'Lease Expiration Date', { allowPast: true });
+      if (dateErr) return dateErr;
+      return validateDateRange(all.startDate, val, 'Commencement Date', 'Expiration Date');
+    },
+    terms: (val) => validateRequired(val, 'Agreement Terms & Conditions'),
+  };
+
+  const {
+    values,
+    setValues,
+    errors,
+    touched,
+    handleChange,
+    handleBlur,
+    validateAll,
+  } = useForm(
+    {
+      propertyId: '',
+      tenantEmail: '',
+      monthlyRent: '',
+      securityDeposit: '',
+      startDate: '',
+      endDate: '',
+      status: 'Active',
+      terms:
+        '1. The tenant agrees to pay the designated monthly rent on or before the 1st of each calendar month.\n2. A refundable security deposit is held by the landlord and returned upon satisfactory end-of-tenancy inspection.\n3. The property shall be used exclusively for peaceful residential purposes.\n4. A minimum of 30 days prior written notice is mandatory for lease termination by either party.',
+    },
+    validators
+  );
 
   useEffect(() => {
     const fetchOwnerProps = async () => {
       setLoadingProps(true);
       try {
         const res = await propertyService.getMyProperties();
-        setProperties(res.data || []);
-        if (res.data && res.data.length > 0) {
-          setFormData((prev) => ({
+        const propList = res.data || [];
+        setProperties(propList);
+        if (propList.length > 0) {
+          const firstProp = propList[0];
+          setValues((prev) => ({
             ...prev,
-            propertyId: res.data[0]._id,
-            monthlyRent: res.data[0].price || '',
-            securityDeposit: (res.data[0].price || 0) * 2,
+            propertyId: firstProp._id,
+            monthlyRent: String(firstProp.price || ''),
+            securityDeposit: String((firstProp.price || 0) * 2),
           }));
         }
       } catch (err) {
-        setError(err.message || 'Failed to load your properties');
+        setServerError(err.message || 'Failed to load your properties');
       } finally {
         setLoadingProps(false);
       }
     };
 
     fetchOwnerProps();
-  }, []);
+  }, [setValues]);
 
-  const handlePropertyChange = (e) => {
+  const handlePropertySelect = (e) => {
     const selectedId = e.target.value;
     const selectedProp = properties.find((p) => p._id === selectedId);
-    setFormData((prev) => ({
-      ...prev,
-      propertyId: selectedId,
-      monthlyRent: selectedProp ? selectedProp.price : prev.monthlyRent,
-      securityDeposit: selectedProp ? selectedProp.price * 2 : prev.securityDeposit,
-    }));
+    handleChange('propertyId', selectedId);
+    if (selectedProp) {
+      handleChange('monthlyRent', String(selectedProp.price || ''));
+      handleChange('securityDeposit', String((selectedProp.price || 0) * 2));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.propertyId || !formData.tenantEmail || !formData.monthlyRent || !formData.startDate || !formData.endDate) {
-      setError('Please fill in all mandatory fields');
-      return;
-    }
+    setServerError('');
 
-    if (new Date(formData.endDate) <= new Date(formData.startDate)) {
-      setError('Agreement end date must be after the start date');
-      return;
-    }
+    const isValid = validateAll();
+    if (!isValid) return;
 
     setSubmitting(true);
-    setError('');
     try {
       const res = await agreementService.createAgreement({
-        propertyId: formData.propertyId,
-        tenantEmail: formData.tenantEmail.trim().toLowerCase(),
-        monthlyRent: Number(formData.monthlyRent),
-        securityDeposit: Number(formData.securityDeposit || 0),
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        terms: formData.terms,
-        status: formData.status,
+        propertyId: values.propertyId,
+        tenantEmail: values.tenantEmail.trim().toLowerCase(),
+        monthlyRent: Number(values.monthlyRent),
+        securityDeposit: Number(values.securityDeposit || 0),
+        startDate: values.startDate,
+        endDate: values.endDate,
+        terms: values.terms,
+        status: values.status,
       });
 
       navigate(`/agreements/${res.data._id}`);
     } catch (err) {
-      setError(err.message || 'Failed to generate rental agreement');
+      setServerError(err.message || 'Failed to generate rental agreement');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const getInputStyle = (fieldName) => {
+    const hasError = touched[fieldName] && Boolean(errors[fieldName]);
+    const isValid = touched[fieldName] && !errors[fieldName] && values[fieldName];
+    if (hasError) return 'border-rose-400 bg-rose-50/30 text-rose-900 focus:border-rose-500';
+    if (isValid) return 'border-emerald-400 bg-emerald-50/20 text-slate-800 focus:border-emerald-500';
+    return 'border-slate-200 bg-slate-50 text-slate-800 focus:border-teal-500 focus:bg-white';
+  };
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 space-y-6">
@@ -149,11 +184,11 @@ const CreateAgreement = () => {
           </Link>
         </Card>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {error && (
+        <form onSubmit={handleSubmit} noValidate className="space-y-6">
+          {serverError && (
             <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{error}</span>
+              <span>{serverError}</span>
             </div>
           )}
 
@@ -169,13 +204,16 @@ const CreateAgreement = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  Select Leased Property *
+                  Select Leased Property <span className="text-rose-500">*</span>
                 </label>
                 <select
-                  value={formData.propertyId}
-                  onChange={handlePropertyChange}
-                  required
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500 bg-white"
+                  name="propertyId"
+                  value={values.propertyId}
+                  onChange={handlePropertySelect}
+                  onBlur={() => handleBlur('propertyId')}
+                  className={`w-full px-3 py-2 border rounded-xl text-xs outline-none bg-white transition ${getInputStyle(
+                    'propertyId'
+                  )}`}
                 >
                   {properties.map((p) => (
                     <option key={p._id} value={p._id}>
@@ -183,19 +221,29 @@ const CreateAgreement = () => {
                     </option>
                   ))}
                 </select>
+                <FieldError error={errors.propertyId} touched={touched.propertyId} />
               </div>
 
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  Tenant Account Email *
+                  Tenant Account Email <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="email"
-                  value={formData.tenantEmail}
-                  onChange={(e) => setFormData({ ...formData, tenantEmail: e.target.value })}
+                  name="tenantEmail"
+                  value={values.tenantEmail}
+                  onChange={(e) => handleChange('tenantEmail', e.target.value)}
+                  onBlur={() => handleBlur('tenantEmail')}
                   placeholder="tenant@estateflow.com"
-                  required
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500"
+                  className={`w-full px-3 py-2 border rounded-xl text-xs outline-none transition ${getInputStyle(
+                    'tenantEmail'
+                  )}`}
+                />
+                <FieldError
+                  error={errors.tenantEmail}
+                  touched={touched.tenantEmail}
+                  showSuccess
+                  successMessage="Valid tenant email"
                 />
               </div>
             </div>
@@ -213,55 +261,86 @@ const CreateAgreement = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  Monthly Rent (₹) *
+                  Monthly Rent (₹) <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="number"
+                  name="monthlyRent"
                   min="1"
-                  value={formData.monthlyRent}
-                  onChange={(e) => setFormData({ ...formData, monthlyRent: e.target.value })}
-                  required
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500"
+                  value={values.monthlyRent}
+                  onChange={(e) => handleChange('monthlyRent', e.target.value)}
+                  onBlur={() => handleBlur('monthlyRent')}
+                  className={`w-full px-3 py-2 border rounded-xl text-xs outline-none transition ${getInputStyle(
+                    'monthlyRent'
+                  )}`}
+                />
+                <FieldError
+                  error={errors.monthlyRent}
+                  touched={touched.monthlyRent}
+                  showSuccess
+                  successMessage="Valid monthly rent"
                 />
               </div>
 
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  Security Deposit (₹) *
+                  Security Deposit (₹) <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="number"
+                  name="securityDeposit"
                   min="0"
-                  value={formData.securityDeposit}
-                  onChange={(e) => setFormData({ ...formData, securityDeposit: e.target.value })}
-                  required
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500"
+                  value={values.securityDeposit}
+                  onChange={(e) => handleChange('securityDeposit', e.target.value)}
+                  onBlur={() => handleBlur('securityDeposit')}
+                  className={`w-full px-3 py-2 border rounded-xl text-xs outline-none transition ${getInputStyle(
+                    'securityDeposit'
+                  )}`}
+                />
+                <FieldError
+                  error={errors.securityDeposit}
+                  touched={touched.securityDeposit}
+                  showSuccess
+                  successMessage="Deposit amount valid"
                 />
               </div>
 
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  Lease Commencement Date *
+                  Lease Commencement Date <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="date"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  required
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500"
+                  name="startDate"
+                  value={values.startDate}
+                  onChange={(e) => handleChange('startDate', e.target.value)}
+                  onBlur={() => handleBlur('startDate')}
+                  className={`w-full px-3 py-2 border rounded-xl text-xs outline-none transition ${getInputStyle(
+                    'startDate'
+                  )}`}
                 />
+                <FieldError error={errors.startDate} touched={touched.startDate} />
               </div>
 
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  Lease Expiration Date *
+                  Lease Expiration Date <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="date"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  required
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500"
+                  name="endDate"
+                  value={values.endDate}
+                  onChange={(e) => handleChange('endDate', e.target.value)}
+                  onBlur={() => handleBlur('endDate')}
+                  className={`w-full px-3 py-2 border rounded-xl text-xs outline-none transition ${getInputStyle(
+                    'endDate'
+                  )}`}
+                />
+                <FieldError
+                  error={errors.endDate}
+                  touched={touched.endDate}
+                  showSuccess
+                  successMessage="Valid lease duration"
                 />
               </div>
             </div>
@@ -279,14 +358,24 @@ const CreateAgreement = () => {
             <div className="space-y-3 text-xs">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  Agreement Terms & Conditions
+                  Agreement Terms & Conditions <span className="text-rose-500">*</span>
                 </label>
                 <textarea
+                  name="terms"
                   rows={5}
-                  value={formData.terms}
-                  onChange={(e) => setFormData({ ...formData, terms: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500 resize-none font-mono"
+                  value={values.terms}
+                  onChange={(e) => handleChange('terms', e.target.value)}
+                  onBlur={() => handleBlur('terms')}
+                  className={`w-full px-3 py-2 border rounded-xl text-xs outline-none resize-none font-mono transition ${getInputStyle(
+                    'terms'
+                  )}`}
                 ></textarea>
+                <FieldError
+                  error={errors.terms}
+                  touched={touched.terms}
+                  showSuccess
+                  successMessage="Terms entered"
+                />
               </div>
 
               <div>
@@ -294,8 +383,9 @@ const CreateAgreement = () => {
                   Initial Status
                 </label>
                 <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  name="status"
+                  value={values.status}
+                  onChange={(e) => handleChange('status', e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500 bg-white"
                 >
                   <option value="Active">Active (Immediately mark property as Rented)</option>
@@ -306,7 +396,12 @@ const CreateAgreement = () => {
           </Card>
 
           <div className="flex items-center justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" size="md" onClick={() => navigate('/agreements')}>
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={() => navigate('/agreements')}
+            >
               Cancel
             </Button>
             <Button

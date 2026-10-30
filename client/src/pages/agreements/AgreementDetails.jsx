@@ -25,6 +25,8 @@ import { useAuth } from '../../context/AuthContext';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
+import FieldError from '../../components/common/FieldError';
+import { validateRupeeAmount, validateRequired } from '../../utils/validators';
 
 const AgreementDetails = () => {
   const { id } = useParams();
@@ -44,9 +46,29 @@ const AgreementDetails = () => {
     paymentMethod: 'Simulated Digital Payment',
     notes: '',
   });
+  const [paymentErrors, setPaymentErrors] = useState({});
+  const [paymentTouched, setPaymentTouched] = useState({});
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentError, setPaymentError] = useState('');
+
+  const validatePaymentField = (field, val) => {
+    if (field === 'amount') return validateRupeeAmount(val, 'Payment Amount', { min: 1, max: 50000000 });
+    if (field === 'month') return validateRequired(val, 'Billing Month / Period');
+    return null;
+  };
+
+  const handlePaymentChange = (field, val) => {
+    setPaymentData((prev) => ({ ...prev, [field]: val }));
+    const err = validatePaymentField(field, val);
+    setPaymentErrors((prev) => ({ ...prev, [field]: err }));
+  };
+
+  const handlePaymentBlur = (field) => {
+    setPaymentTouched((prev) => ({ ...prev, [field]: true }));
+    const err = validatePaymentField(field, paymentData[field]);
+    setPaymentErrors((prev) => ({ ...prev, [field]: err }));
+  };
 
   const fetchAgreement = async () => {
     setLoading(true);
@@ -74,21 +96,28 @@ const AgreementDetails = () => {
 
   const handleRecordPaymentSubmit = async (e) => {
     e.preventDefault();
-    if (!paymentData.amount || Number(paymentData.amount) <= 0) {
-      setPaymentError('Please enter a valid payment amount');
+    setPaymentError('');
+
+    const newErrors = {
+      amount: validatePaymentField('amount', paymentData.amount),
+      month: validatePaymentField('month', paymentData.month),
+    };
+    setPaymentTouched({ amount: true, month: true });
+    setPaymentErrors(newErrors);
+
+    if (Object.values(newErrors).some(Boolean)) {
       return;
     }
 
     setPaymentSubmitting(true);
-    setPaymentError('');
     try {
       await paymentService.createPayment({
         agreementId: id,
         amount: Number(paymentData.amount),
         paymentType: paymentData.paymentType,
-        month: paymentData.month,
+        month: paymentData.month.trim(),
         paymentMethod: paymentData.paymentMethod,
-        notes: paymentData.notes,
+        notes: paymentData.notes ? paymentData.notes.trim() : '',
         status: 'Paid',
       });
       setPaymentSuccess(true);
@@ -375,7 +404,7 @@ const AgreementDetails = () => {
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleRecordPaymentSubmit} className="space-y-3 text-xs">
+              <form onSubmit={handleRecordPaymentSubmit} noValidate className="space-y-3 text-xs">
                 {paymentError && (
                   <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0" />
@@ -401,15 +430,27 @@ const AgreementDetails = () => {
 
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      Amount (₹)
+                      Amount (₹) <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="number"
                       min="1"
                       value={paymentData.amount}
-                      onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })}
-                      required
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500"
+                      onChange={(e) => handlePaymentChange('amount', e.target.value)}
+                      onBlur={() => handlePaymentBlur('amount')}
+                      className={`w-full px-3 py-2 border rounded-xl text-xs outline-none transition ${
+                        paymentTouched.amount && paymentErrors.amount
+                          ? 'border-rose-400 bg-rose-50/30'
+                          : paymentTouched.amount && !paymentErrors.amount && paymentData.amount
+                          ? 'border-emerald-400'
+                          : 'border-slate-200 bg-slate-50 focus:border-teal-500'
+                      }`}
+                    />
+                    <FieldError
+                      error={paymentErrors.amount}
+                      touched={paymentTouched.amount}
+                      showSuccess
+                      successMessage="Valid amount"
                     />
                   </div>
                 </div>
@@ -417,15 +458,27 @@ const AgreementDetails = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      Billing Month / Period
+                      Billing Month / Period <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={paymentData.month}
-                      onChange={(e) => setPaymentData({ ...paymentData, month: e.target.value })}
+                      onChange={(e) => handlePaymentChange('month', e.target.value)}
+                      onBlur={() => handlePaymentBlur('month')}
                       placeholder="e.g. October 2026"
-                      required
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500"
+                      className={`w-full px-3 py-2 border rounded-xl text-xs outline-none transition ${
+                        paymentTouched.month && paymentErrors.month
+                          ? 'border-rose-400 bg-rose-50/30'
+                          : paymentTouched.month && !paymentErrors.month && paymentData.month
+                          ? 'border-emerald-400'
+                          : 'border-slate-200 bg-slate-50 focus:border-teal-500'
+                      }`}
+                    />
+                    <FieldError
+                      error={paymentErrors.month}
+                      touched={paymentTouched.month}
+                      showSuccess
+                      successMessage="Period specified"
                     />
                   </div>
 

@@ -29,6 +29,13 @@ const createAgreement = async (req, res, next) => {
       });
     }
 
+    if (isNaN(Number(monthlyRent)) || Number(monthlyRent) <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Monthly rent must be a valid positive amount',
+      });
+    }
+
     const start = new Date(startDate);
     const end = new Date(endDate);
 

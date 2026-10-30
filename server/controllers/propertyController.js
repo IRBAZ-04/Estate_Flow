@@ -211,6 +211,27 @@ const createProperty = async (req, res, next) => {
       });
     }
 
+    if (isNaN(Number(price)) || Number(price) <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Price must be a valid positive number greater than zero',
+      });
+    }
+
+    if (isNaN(Number(area)) || Number(area) < 10) {
+      return res.status(400).json({
+        success: false,
+        message: 'Area must be at least 10 sq.ft',
+      });
+    }
+
+    if (description.trim().length < 20) {
+      return res.status(400).json({
+        success: false,
+        message: 'Property description must be at least 20 characters long',
+      });
+    }
+
     let propertyImages = [];
     if (req.files && req.files.length > 0) {
       propertyImages = req.files.map((file) => `/uploads/properties/${file.filename}`);

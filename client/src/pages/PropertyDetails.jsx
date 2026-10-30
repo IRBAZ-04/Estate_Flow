@@ -33,6 +33,15 @@ import { useAuth } from '../context/AuthContext';
 import Loader from '../components/common/Loader';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
+import FieldError from '../components/common/FieldError';
+import {
+  validateName,
+  validateEmail,
+  validatePhone,
+  validateDescription,
+  validateDate,
+  validateRequired,
+} from '../utils/validators';
 
 const PropertyDetails = () => {
   const { id } = useParams();
@@ -53,6 +62,8 @@ const PropertyDetails = () => {
     phone: '',
     message: '',
   });
+  const [inquiryErrors, setInquiryErrors] = useState({});
+  const [inquiryTouched, setInquiryTouched] = useState({});
   const [inquirySubmitting, setInquirySubmitting] = useState(false);
   const [inquirySuccess, setInquirySuccess] = useState(false);
   const [inquiryError, setInquiryError] = useState('');
@@ -64,6 +75,8 @@ const PropertyDetails = () => {
     time: '10:00 AM',
     notes: '',
   });
+  const [visitErrors, setVisitErrors] = useState({});
+  const [visitTouched, setVisitTouched] = useState({});
   const [visitSubmitting, setVisitSubmitting] = useState(false);
   const [visitSuccess, setVisitSuccess] = useState(false);
   const [visitError, setVisitError] = useState('');
@@ -131,7 +144,29 @@ const PropertyDetails = () => {
     }
   };
 
-  // Open Inquiry Dialog
+  // Inquiry Validation & Handlers
+  const validateInquiryField = (field, val, currentData) => {
+    const data = currentData || inquiryData;
+    if (field === 'name') return validateName(val, 'Your Name');
+    if (field === 'email') return validateEmail(val, 'Your Email');
+    if (field === 'phone') return val && val.trim() ? validatePhone(val, 'Your Phone') : null;
+    if (field === 'message') return validateDescription(val, 'Inquiry Message', { min: 10, max: 1000 });
+    return null;
+  };
+
+  const handleInquiryChange = (field, val) => {
+    const nextData = { ...inquiryData, [field]: val };
+    setInquiryData(nextData);
+    const err = validateInquiryField(field, val, nextData);
+    setInquiryErrors((prev) => ({ ...prev, [field]: err }));
+  };
+
+  const handleInquiryBlur = (field) => {
+    setInquiryTouched((prev) => ({ ...prev, [field]: true }));
+    const err = validateInquiryField(field, inquiryData[field], inquiryData);
+    setInquiryErrors((prev) => ({ ...prev, [field]: err }));
+  };
+
   const openInquiryModal = () => {
     if (!isAuthenticated) {
       navigate('/login');
@@ -139,6 +174,8 @@ const PropertyDetails = () => {
     }
     setInquirySuccess(false);
     setInquiryError('');
+    setInquiryErrors({});
+    setInquiryTouched({});
     setInquiryData((prev) => ({
       ...prev,
       message: `Hi, I am interested in "${property?.title}". Please provide more details or let me know when we can discuss this property.`,
@@ -146,23 +183,31 @@ const PropertyDetails = () => {
     setInquiryModalOpen(true);
   };
 
-  // Submit Inquiry
   const handleInquirySubmit = async (e) => {
     e.preventDefault();
-    if (!inquiryData.message.trim()) {
-      setInquiryError('Please enter your inquiry message');
+    setInquiryError('');
+
+    const newErrors = {
+      name: validateInquiryField('name', inquiryData.name),
+      email: validateInquiryField('email', inquiryData.email),
+      phone: validateInquiryField('phone', inquiryData.phone),
+      message: validateInquiryField('message', inquiryData.message),
+    };
+    setInquiryTouched({ name: true, email: true, phone: true, message: true });
+    setInquiryErrors(newErrors);
+
+    if (Object.values(newErrors).some(Boolean)) {
       return;
     }
 
     setInquirySubmitting(true);
-    setInquiryError('');
     try {
       await inquiryService.createInquiry({
         propertyId: id,
-        message: inquiryData.message,
-        name: inquiryData.name,
-        email: inquiryData.email,
-        phone: inquiryData.phone,
+        message: inquiryData.message.trim(),
+        name: inquiryData.name.trim(),
+        email: inquiryData.email.trim().toLowerCase(),
+        phone: inquiryData.phone ? inquiryData.phone.trim() : undefined,
       });
       setInquirySuccess(true);
     } catch (err) {
@@ -172,7 +217,26 @@ const PropertyDetails = () => {
     }
   };
 
-  // Open Visit Dialog
+  // Visit Validation & Handlers
+  const validateVisitField = (field, val) => {
+    if (field === 'date') return validateDate(val, 'Appointment Date', { allowPast: false });
+    if (field === 'time') return validateRequired(val, 'Preferred Time Slot');
+    return null;
+  };
+
+  const handleVisitChange = (field, val) => {
+    const nextData = { ...visitData, [field]: val };
+    setVisitData(nextData);
+    const err = validateVisitField(field, val);
+    setVisitErrors((prev) => ({ ...prev, [field]: err }));
+  };
+
+  const handleVisitBlur = (field) => {
+    setVisitTouched((prev) => ({ ...prev, [field]: true }));
+    const err = validateVisitField(field, visitData[field]);
+    setVisitErrors((prev) => ({ ...prev, [field]: err }));
+  };
+
   const openVisitModal = () => {
     if (!isAuthenticated) {
       navigate('/login');
@@ -180,7 +244,8 @@ const PropertyDetails = () => {
     }
     setVisitSuccess(false);
     setVisitError('');
-    // Default to tomorrow
+    setVisitErrors({});
+    setVisitTouched({});
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     setVisitData({
@@ -191,22 +256,28 @@ const PropertyDetails = () => {
     setVisitModalOpen(true);
   };
 
-  // Submit Visit
   const handleVisitSubmit = async (e) => {
     e.preventDefault();
-    if (!visitData.date || !visitData.time) {
-      setVisitError('Please select both a date and time slot for your visit');
+    setVisitError('');
+
+    const newErrors = {
+      date: validateVisitField('date', visitData.date),
+      time: validateVisitField('time', visitData.time),
+    };
+    setVisitTouched({ date: true, time: true });
+    setVisitErrors(newErrors);
+
+    if (Object.values(newErrors).some(Boolean)) {
       return;
     }
 
     setVisitSubmitting(true);
-    setVisitError('');
     try {
       await visitService.createVisit({
         propertyId: id,
         date: visitData.date,
         time: visitData.time,
-        notes: visitData.notes,
+        notes: visitData.notes ? visitData.notes.trim() : '',
       });
       setVisitSuccess(true);
     } catch (err) {
@@ -566,7 +637,7 @@ const PropertyDetails = () => {
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleInquirySubmit} className="space-y-3 text-xs">
+              <form onSubmit={handleInquirySubmit} noValidate className="space-y-3 text-xs">
                 {inquiryError && (
                   <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0" />
@@ -576,48 +647,111 @@ const PropertyDetails = () => {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Your Name</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Your Name <span className="text-rose-500">*</span>
+                    </label>
                     <input
                       type="text"
                       value={inquiryData.name}
-                      onChange={(e) => setInquiryData({ ...inquiryData, name: e.target.value })}
-                      required
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500"
+                      onChange={(e) => handleInquiryChange('name', e.target.value)}
+                      onBlur={() => handleInquiryBlur('name')}
+                      className={`w-full px-3 py-2 border rounded-xl text-xs outline-none transition ${
+                        inquiryTouched.name && inquiryErrors.name
+                          ? 'border-rose-400 bg-rose-50/30'
+                          : inquiryTouched.name && !inquiryErrors.name && inquiryData.name
+                          ? 'border-emerald-400'
+                          : 'border-slate-200 bg-slate-50 focus:border-teal-500'
+                      }`}
+                    />
+                    <FieldError
+                      error={inquiryErrors.name}
+                      touched={inquiryTouched.name}
+                      showSuccess
+                      successMessage="Valid name"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Your Phone</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Your Phone (10 digits)
+                    </label>
                     <input
-                      type="text"
+                      type="tel"
+                      maxLength={10}
                       value={inquiryData.phone}
-                      onChange={(e) => setInquiryData({ ...inquiryData, phone: e.target.value })}
-                      placeholder="+91 98765 43210"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500"
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        handleInquiryChange('phone', val);
+                      }}
+                      onBlur={() => handleInquiryBlur('phone')}
+                      placeholder="9876543210"
+                      className={`w-full px-3 py-2 border rounded-xl text-xs outline-none transition ${
+                        inquiryTouched.phone && inquiryErrors.phone
+                          ? 'border-rose-400 bg-rose-50/30'
+                          : inquiryTouched.phone && !inquiryErrors.phone && inquiryData.phone
+                          ? 'border-emerald-400'
+                          : 'border-slate-200 bg-slate-50 focus:border-teal-500'
+                      }`}
+                    />
+                    <FieldError
+                      error={inquiryErrors.phone}
+                      touched={inquiryTouched.phone}
+                      showSuccess={Boolean(inquiryData.phone)}
+                      successMessage="Valid phone"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Your Email</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Your Email <span className="text-rose-500">*</span>
+                  </label>
                   <input
                     type="email"
                     value={inquiryData.email}
-                    onChange={(e) => setInquiryData({ ...inquiryData, email: e.target.value })}
-                    required
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500"
+                    onChange={(e) => handleInquiryChange('email', e.target.value)}
+                    onBlur={() => handleInquiryBlur('email')}
+                    className={`w-full px-3 py-2 border rounded-xl text-xs outline-none transition ${
+                      inquiryTouched.email && inquiryErrors.email
+                        ? 'border-rose-400 bg-rose-50/30'
+                        : inquiryTouched.email && !inquiryErrors.email && inquiryData.email
+                        ? 'border-emerald-400'
+                        : 'border-slate-200 bg-slate-50 focus:border-teal-500'
+                    }`}
+                  />
+                  <FieldError
+                    error={inquiryErrors.email}
+                    touched={inquiryTouched.email}
+                    showSuccess
+                    successMessage="Valid email"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Message</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Message <span className="text-rose-500">*</span>
+                  </label>
                   <textarea
                     rows={4}
                     value={inquiryData.message}
-                    onChange={(e) => setInquiryData({ ...inquiryData, message: e.target.value })}
-                    placeholder="Write your questions regarding the property..."
-                    required
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500 resize-none"
+                    onChange={(e) => handleInquiryChange('message', e.target.value)}
+                    onBlur={() => handleInquiryBlur('message')}
+                    placeholder="Write your questions regarding the property (min. 10 characters)..."
+                    className={`w-full px-3 py-2 border rounded-xl text-xs outline-none resize-none transition ${
+                      inquiryTouched.message && inquiryErrors.message
+                        ? 'border-rose-400 bg-rose-50/30'
+                        : inquiryTouched.message && !inquiryErrors.message && inquiryData.message
+                        ? 'border-emerald-400'
+                        : 'border-slate-200 bg-slate-50 focus:border-teal-500'
+                    }`}
                   ></textarea>
+                  <FieldError
+                    error={inquiryErrors.message}
+                    touched={inquiryTouched.message}
+                    showSuccess
+                    successMessage="Detailed message"
+                    currentLength={inquiryData.message.length}
+                    maxLength={1000}
+                  />
                 </div>
 
                 <div className="pt-2 flex justify-end gap-2">
@@ -690,7 +824,7 @@ const PropertyDetails = () => {
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleVisitSubmit} className="space-y-3 text-xs">
+              <form onSubmit={handleVisitSubmit} noValidate className="space-y-3 text-xs">
                 {visitError && (
                   <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0" />
@@ -701,26 +835,33 @@ const PropertyDetails = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      Appointment Date
+                      Appointment Date <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="date"
                       min={todayStr}
                       value={visitData.date}
-                      onChange={(e) => setVisitData({ ...visitData, date: e.target.value })}
-                      required
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500"
+                      onChange={(e) => handleVisitChange('date', e.target.value)}
+                      onBlur={() => handleVisitBlur('date')}
+                      className={`w-full px-3 py-2 border rounded-xl text-xs outline-none transition ${
+                        visitTouched.date && visitErrors.date
+                          ? 'border-rose-400 bg-rose-50/30'
+                          : visitTouched.date && !visitErrors.date && visitData.date
+                          ? 'border-emerald-400'
+                          : 'border-slate-200 bg-slate-50 focus:border-teal-500'
+                      }`}
                     />
+                    <FieldError error={visitErrors.date} touched={visitTouched.date} />
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      Preferred Time Slot
+                      Preferred Time Slot <span className="text-rose-500">*</span>
                     </label>
                     <select
                       value={visitData.time}
-                      onChange={(e) => setVisitData({ ...visitData, time: e.target.value })}
-                      required
+                      onChange={(e) => handleVisitChange('time', e.target.value)}
+                      onBlur={() => handleVisitBlur('time')}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500 bg-white"
                     >
                       {timeSlots.map((slot) => (
@@ -729,6 +870,7 @@ const PropertyDetails = () => {
                         </option>
                       ))}
                     </select>
+                    <FieldError error={visitErrors.time} touched={visitTouched.time} />
                   </div>
                 </div>
 
@@ -739,7 +881,7 @@ const PropertyDetails = () => {
                   <textarea
                     rows={3}
                     value={visitData.notes}
-                    onChange={(e) => setVisitData({ ...visitData, notes: e.target.value })}
+                    onChange={(e) => handleVisitChange('notes', e.target.value)}
                     placeholder="e.g. Will be visiting with family, requesting parking space..."
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500 resize-none"
                   ></textarea>

@@ -1,22 +1,21 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Lock, LogIn, Sparkles, Building2, AlertCircle, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, LogIn, Sparkles, Building2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
+import FieldError from '../components/common/FieldError';
+import useForm from '../hooks/useForm';
+import { validateEmail, validatePassword } from '../utils/validators';
 
 const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [serverError, setServerError] = useState(null);
 
   // Quick Demo Logins
   const demoAccounts = [
@@ -25,21 +24,47 @@ const Login = () => {
     { label: 'Tenant (Demo)', email: 'tenant@estateflow.com', password: 'Tenant@123456', role: 'tenant' },
   ];
 
+  const validators = {
+    email: (val) => validateEmail(val, 'Email Address'),
+    password: (val) => validatePassword(val, 'Password', 6),
+  };
+
+  const {
+    values,
+    setValues,
+    errors,
+    setErrors,
+    touched,
+    handleChange,
+    handleBlur,
+    validateAll,
+  } = useForm(
+    {
+      email: '',
+      password: '',
+    },
+    validators
+  );
+
   const fillDemo = (demo) => {
-    setFormData({ email: demo.email, password: demo.password });
-    setError(null);
+    setValues({ email: demo.email, password: demo.password });
+    setErrors({});
+    setServerError(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
+    setServerError(null);
+
+    const isValid = validateAll();
+    if (!isValid) return;
+
     setLoading(true);
 
-    const res = await login(formData.email, formData.password);
+    const res = await login(values.email.trim().toLowerCase(), values.password);
     setLoading(false);
 
     if (res.success) {
-      // Determine redirection path based on role or intended destination
       const from = location.state?.from?.pathname;
       if (from && from !== '/login') {
         navigate(from, { replace: true });
@@ -51,8 +76,20 @@ const Login = () => {
         navigate('/tenant/dashboard', { replace: true });
       }
     } else {
-      setError(res.message);
+      setServerError(res.message);
     }
+  };
+
+  const getInputStyle = (fieldName) => {
+    const hasError = touched[fieldName] && Boolean(errors[fieldName]);
+    const isValid = touched[fieldName] && !errors[fieldName] && values[fieldName];
+    if (hasError) {
+      return 'border-rose-400 bg-rose-50/30 text-rose-900 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20';
+    }
+    if (isValid) {
+      return 'border-emerald-400 bg-emerald-50/20 text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20';
+    }
+    return 'border-slate-200 bg-slate-50 text-slate-800 focus:border-teal-500 focus:bg-white';
   };
 
   return (
@@ -94,55 +131,73 @@ const Login = () => {
             </div>
           </div>
 
-          {error && (
+          {serverError && (
             <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-center gap-2.5 animate-shake">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>{error}</span>
+              <span>{serverError}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Email Address
+                Email Address <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  name="email"
+                  value={values.email}
+                  onChange={(e) => handleChange('email', e.target.value)}
+                  onBlur={() => handleBlur('email')}
                   placeholder="name@example.com"
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-teal-500 focus:bg-white transition"
+                  className={`w-full pl-10 pr-4 py-2.5 border rounded-xl text-xs placeholder:text-slate-400 outline-none transition ${getInputStyle(
+                    'email'
+                  )}`}
                 />
               </div>
+              <FieldError
+                error={errors.email}
+                touched={touched.email}
+                showSuccess
+                successMessage="Valid email format"
+              />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-semibold text-slate-700">
-                  Password
+                  Password <span className="text-rose-500">*</span>
                 </label>
               </div>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  required
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  name="password"
+                  value={values.password}
+                  onChange={(e) => handleChange('password', e.target.value)}
+                  onBlur={() => handleBlur('password')}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-teal-500 focus:bg-white transition"
+                  className={`w-full pl-10 pr-10 py-2.5 border rounded-xl text-xs placeholder:text-slate-400 outline-none transition ${getInputStyle(
+                    'password'
+                  )}`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>
               </div>
+              <FieldError
+                error={errors.password}
+                touched={touched.password}
+                showSuccess
+                successMessage="Password entered"
+              />
             </div>
 
             <Button

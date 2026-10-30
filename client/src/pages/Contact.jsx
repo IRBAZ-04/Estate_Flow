@@ -1,23 +1,54 @@
 import React, { useState } from 'react';
-import { Mail, Phone, MapPin, Send, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, CheckCircle2 } from 'lucide-react';
+import FieldError from '../components/common/FieldError';
+import useForm from '../hooks/useForm';
+import { validateName, validateEmail, validateDescription } from '../utils/validators';
 
 const Contact = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: '',
-  });
   const [submitted, setSubmitted] = useState(false);
+
+  const validators = {
+    name: (val) => validateName(val, 'Your Name'),
+    email: (val) => validateEmail(val, 'Email Address'),
+    message: (val) => validateDescription(val, 'Message', { min: 10, max: 2000 }),
+  };
+
+  const {
+    values,
+    errors,
+    touched,
+    handleChange,
+    handleBlur,
+    validateAll,
+    resetForm,
+  } = useForm(
+    {
+      name: '',
+      email: '',
+      subject: '',
+      message: '',
+    },
+    validators
+  );
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.message) return;
+    const isValid = validateAll();
+    if (!isValid) return;
+
     setSubmitted(true);
     setTimeout(() => {
       setSubmitted(false);
-      setFormData({ name: '', email: '', subject: '', message: '' });
+      resetForm();
     }, 4000);
+  };
+
+  const getInputStyle = (fieldName) => {
+    const hasError = touched[fieldName] && Boolean(errors[fieldName]);
+    const isValid = touched[fieldName] && !errors[fieldName] && values[fieldName];
+    if (hasError) return 'border-rose-400 bg-rose-50/30 text-rose-900 focus:border-rose-500';
+    if (isValid) return 'border-emerald-400 bg-emerald-50/20 text-slate-800 focus:border-emerald-500';
+    return 'border-slate-200 bg-slate-50 text-slate-800 focus:border-teal-500 focus:bg-white';
   };
 
   return (
@@ -73,32 +104,50 @@ const Contact = () => {
               </p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} noValidate className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Your Name *
+                    Your Name <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    name="name"
+                    value={values.name}
+                    onChange={(e) => handleChange('name', e.target.value)}
+                    onBlur={() => handleBlur('name')}
                     placeholder="Enter your name"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:border-teal-500 focus:bg-white transition"
+                    className={`w-full px-3.5 py-2.5 border rounded-xl text-xs outline-none transition ${getInputStyle(
+                      'name'
+                    )}`}
+                  />
+                  <FieldError
+                    error={errors.name}
+                    touched={touched.name}
+                    showSuccess
+                    successMessage="Valid name"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Email Address *
+                    Email Address <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    name="email"
+                    value={values.email}
+                    onChange={(e) => handleChange('email', e.target.value)}
+                    onBlur={() => handleBlur('email')}
                     placeholder="name@example.com"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:border-teal-500 focus:bg-white transition"
+                    className={`w-full px-3.5 py-2.5 border rounded-xl text-xs outline-none transition ${getInputStyle(
+                      'email'
+                    )}`}
+                  />
+                  <FieldError
+                    error={errors.email}
+                    touched={touched.email}
+                    showSuccess
+                    successMessage="Valid email address"
                   />
                 </div>
               </div>
@@ -109,8 +158,9 @@ const Contact = () => {
                 </label>
                 <input
                   type="text"
-                  value={formData.subject}
-                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                  name="subject"
+                  value={values.subject}
+                  onChange={(e) => handleChange('subject', e.target.value)}
                   placeholder="e.g. Question about Property Listing"
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:border-teal-500 focus:bg-white transition"
                 />
@@ -118,16 +168,27 @@ const Contact = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Message *
+                  Message <span className="text-rose-500">*</span>
                 </label>
                 <textarea
-                  required
+                  name="message"
                   rows={4}
-                  value={formData.message}
-                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  placeholder="Type your message here..."
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:border-teal-500 focus:bg-white transition resize-none"
+                  value={values.message}
+                  onChange={(e) => handleChange('message', e.target.value)}
+                  onBlur={() => handleBlur('message')}
+                  placeholder="Type your message here (min. 10 characters)..."
+                  className={`w-full px-3.5 py-2.5 border rounded-xl text-xs outline-none transition resize-none ${getInputStyle(
+                    'message'
+                  )}`}
                 ></textarea>
+                <FieldError
+                  error={errors.message}
+                  touched={touched.message}
+                  showSuccess
+                  successMessage="Good message length"
+                  currentLength={values.message.length}
+                  maxLength={2000}
+                />
               </div>
 
               <button

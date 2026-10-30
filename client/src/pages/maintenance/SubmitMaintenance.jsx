@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   AlertCircle,
   PlusCircle,
-  Camera,
 } from 'lucide-react';
 import maintenanceService from '../../services/maintenanceService';
 import agreementService from '../../services/agreementService';
@@ -17,84 +16,16 @@ import propertyService from '../../services/propertyService';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import Loader from '../../components/common/Loader';
+import FieldError from '../../components/common/FieldError';
+import useForm from '../../hooks/useForm';
+import { validateRequired, validateDescription } from '../../utils/validators';
 
 const SubmitMaintenance = () => {
   const navigate = useNavigate();
   const [properties, setProperties] = useState([]);
   const [loadingProps, setLoadingProps] = useState(true);
-
-  const [formData, setFormData] = useState({
-    propertyId: '',
-    title: '',
-    category: 'Plumbing',
-    priority: 'Medium',
-    description: '',
-    images: '',
-  });
-
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const fetchLeasedProperties = async () => {
-      setLoadingProps(true);
-      try {
-        // Fetch active agreements for tenant
-        const agrRes = await agreementService.getAgreements();
-        if (agrRes.data && agrRes.data.length > 0) {
-          const props = agrRes.data
-            .map((a) => a.property)
-            .filter((p) => Boolean(p));
-          setProperties(props);
-          if (props.length > 0) {
-            setFormData((prev) => ({ ...prev, propertyId: props[0]._id }));
-          }
-        } else {
-          // Fallback: public properties list if no active agreement
-          const pubRes = await propertyService.getProperties({ limit: 10 });
-          setProperties(pubRes.data || []);
-          if (pubRes.data && pubRes.data.length > 0) {
-            setFormData((prev) => ({ ...prev, propertyId: pubRes.data[0]._id }));
-          }
-        }
-      } catch (err) {
-        setError(err.message || 'Failed to load properties for maintenance');
-      } finally {
-        setLoadingProps(false);
-      }
-    };
-
-    fetchLeasedProperties();
-  }, []);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.propertyId || !formData.title.trim() || !formData.description.trim()) {
-      setError('Please provide property, issue title, and detailed description');
-      return;
-    }
-
-    setSubmitting(true);
-    setError('');
-    try {
-      const res = await maintenanceService.createMaintenance({
-        propertyId: formData.propertyId,
-        title: formData.title.trim(),
-        category: formData.category,
-        priority: formData.priority,
-        description: formData.description.trim(),
-        images: formData.images
-          ? formData.images.split(',').map((img) => img.trim()).filter(Boolean)
-          : [],
-      });
-
-      navigate('/tenant/maintenance');
-    } catch (err) {
-      setError(err.message || 'Failed to submit maintenance request');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const [serverError, setServerError] = useState('');
 
   const categories = [
     'Plumbing',
@@ -111,6 +42,103 @@ const SubmitMaintenance = () => {
     { label: 'High — Significant issue affecting living comfort', value: 'High' },
     { label: 'Urgent — Immediate hazard / water leakage / power fault', value: 'Urgent' },
   ];
+
+  const validators = {
+    propertyId: (val) => validateRequired(val, 'Rental Property'),
+    title: (val) => {
+      const req = validateRequired(val, 'Issue Summary / Title');
+      if (req) return req;
+      if (val.trim().length < 5) return 'Title must be at least 5 characters long';
+      if (val.trim().length > 100) return 'Title cannot exceed 100 characters';
+      return null;
+    },
+    description: (val) =>
+      validateDescription(val, 'Problem Description', { min: 15, max: 2000 }),
+  };
+
+  const {
+    values,
+    setValues,
+    errors,
+    touched,
+    handleChange,
+    handleBlur,
+    validateAll,
+  } = useForm(
+    {
+      propertyId: '',
+      title: '',
+      category: 'Plumbing',
+      priority: 'Medium',
+      description: '',
+      images: '',
+    },
+    validators
+  );
+
+  useEffect(() => {
+    const fetchLeasedProperties = async () => {
+      setLoadingProps(true);
+      try {
+        const agrRes = await agreementService.getAgreements();
+        if (agrRes.data && agrRes.data.length > 0) {
+          const props = agrRes.data.map((a) => a.property).filter(Boolean);
+          setProperties(props);
+          if (props.length > 0) {
+            setValues((prev) => ({ ...prev, propertyId: props[0]._id }));
+          }
+        } else {
+          const pubRes = await propertyService.getProperties({ limit: 10 });
+          setProperties(pubRes.data || []);
+          if (pubRes.data && pubRes.data.length > 0) {
+            setValues((prev) => ({ ...prev, propertyId: pubRes.data[0]._id }));
+          }
+        }
+      } catch (err) {
+        setServerError(err.message || 'Failed to load properties for maintenance');
+      } finally {
+        setLoadingProps(false);
+      }
+    };
+
+    fetchLeasedProperties();
+  }, [setValues]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setServerError('');
+
+    const isValid = validateAll();
+    if (!isValid) return;
+
+    setSubmitting(true);
+    try {
+      await maintenanceService.createMaintenance({
+        propertyId: values.propertyId,
+        title: values.title.trim(),
+        category: values.category,
+        priority: values.priority,
+        description: values.description.trim(),
+        images: values.images
+          ? values.images.split(',').map((img) => img.trim()).filter(Boolean)
+          : [],
+      });
+
+      navigate('/tenant/maintenance');
+    } catch (err) {
+      setServerError(err.message || 'Failed to submit maintenance request');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const getInputStyle = (fieldName) => {
+    const hasError = touched[fieldName] && Boolean(errors[fieldName]);
+    const isValid = touched[fieldName] && !errors[fieldName] && values[fieldName];
+    if (hasError) return 'border-rose-400 bg-rose-50/30 text-rose-900 focus:border-rose-500';
+    if (isValid) return 'border-emerald-400 bg-emerald-50/20 text-slate-800 focus:border-emerald-500';
+    return 'border-slate-200 bg-slate-50 text-slate-800 focus:border-teal-500 focus:bg-white';
+  };
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 space-y-6">
@@ -152,11 +180,11 @@ const SubmitMaintenance = () => {
           </Link>
         </Card>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {error && (
+        <form onSubmit={handleSubmit} noValidate className="space-y-6">
+          {serverError && (
             <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{error}</span>
+              <span>{serverError}</span>
             </div>
           )}
 
@@ -165,13 +193,16 @@ const SubmitMaintenance = () => {
               {/* Leased Property */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  Select Leased Property *
+                  Select Leased Property <span className="text-rose-500">*</span>
                 </label>
                 <select
-                  value={formData.propertyId}
-                  onChange={(e) => setFormData({ ...formData, propertyId: e.target.value })}
-                  required
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500 bg-white"
+                  name="propertyId"
+                  value={values.propertyId}
+                  onChange={(e) => handleChange('propertyId', e.target.value)}
+                  onBlur={() => handleBlur('propertyId')}
+                  className={`w-full px-3 py-2 border rounded-xl text-xs outline-none bg-white transition ${getInputStyle(
+                    'propertyId'
+                  )}`}
                 >
                   {properties.map((p) => (
                     <option key={p._id} value={p._id}>
@@ -179,20 +210,32 @@ const SubmitMaintenance = () => {
                     </option>
                   ))}
                 </select>
+                <FieldError error={errors.propertyId} touched={touched.propertyId} />
               </div>
 
               {/* Issue Title */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  Issue Summary / Title *
+                  Issue Summary / Title <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  name="title"
+                  value={values.title}
+                  onChange={(e) => handleChange('title', e.target.value)}
+                  onBlur={() => handleBlur('title')}
                   placeholder="e.g. Master Bathroom Tap Leaking Constantly"
-                  required
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500"
+                  className={`w-full px-3 py-2 border rounded-xl text-xs outline-none transition ${getInputStyle(
+                    'title'
+                  )}`}
+                />
+                <FieldError
+                  error={errors.title}
+                  touched={touched.title}
+                  showSuccess
+                  successMessage="Summary provided"
+                  currentLength={values.title.length}
+                  maxLength={100}
                 />
               </div>
 
@@ -200,11 +243,12 @@ const SubmitMaintenance = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                    Maintenance Category *
+                    Maintenance Category <span className="text-rose-500">*</span>
                   </label>
                   <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    name="category"
+                    value={values.category}
+                    onChange={(e) => handleChange('category', e.target.value)}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500 bg-white"
                   >
                     {categories.map((c) => (
@@ -217,11 +261,12 @@ const SubmitMaintenance = () => {
 
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                    Urgency & Priority Level *
+                    Urgency & Priority Level <span className="text-rose-500">*</span>
                   </label>
                   <select
-                    value={formData.priority}
-                    onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                    name="priority"
+                    value={values.priority}
+                    onChange={(e) => handleChange('priority', e.target.value)}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500 bg-white"
                   >
                     {priorities.map((p) => (
@@ -236,27 +281,39 @@ const SubmitMaintenance = () => {
               {/* Description */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  Detailed Problem Description *
+                  Detailed Problem Description <span className="text-rose-500">*</span>
                 </label>
                 <textarea
+                  name="description"
                   rows={4}
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  value={values.description}
+                  onChange={(e) => handleChange('description', e.target.value)}
+                  onBlur={() => handleBlur('description')}
                   placeholder="Describe where the issue is located, when it started, and any symptoms (e.g. water drip, electrical spark, broken hinge)..."
-                  required
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500 resize-none"
+                  className={`w-full px-3 py-2 border rounded-xl text-xs outline-none resize-none transition ${getInputStyle(
+                    'description'
+                  )}`}
                 ></textarea>
+                <FieldError
+                  error={errors.description}
+                  touched={touched.description}
+                  showSuccess
+                  successMessage="Detailed description entered"
+                  currentLength={values.description.length}
+                  maxLength={2000}
+                />
               </div>
 
               {/* Photos URL */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  Attach Photo URLs (Comma-separated)
+                  Attach Photo URLs (Optional, comma-separated)
                 </label>
                 <input
                   type="text"
-                  value={formData.images}
-                  onChange={(e) => setFormData({ ...formData, images: e.target.value })}
+                  name="images"
+                  value={values.images}
+                  onChange={(e) => handleChange('images', e.target.value)}
                   placeholder="https://example.com/leak1.jpg, https://example.com/leak2.jpg"
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-teal-500"
                 />

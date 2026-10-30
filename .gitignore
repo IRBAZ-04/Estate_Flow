@@ -23,6 +23,7 @@ server/uploads/*
 # Logs and debug
 logs/
 *.log
+mongodb_data/
 
 # OS generated files
 .DS_Store
